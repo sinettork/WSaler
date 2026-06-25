@@ -1,0 +1,110 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreWarehouseRequest;
+use App\Http\Requests\UpdateWarehouseRequest;
+use App\Http\Resources\WarehouseResource;
+use App\Models\ActivityLog;
+use App\Models\Warehouse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class WarehouseController extends Controller
+{
+    public function index(Request $request)
+    {
+        $query = Warehouse::query();
+
+        if ($search = $request->query('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->has('is_active')) {
+            $query->where('is_active', $request->boolean('is_active'));
+        }
+
+        $query->withCount('batches')->orderBy('name');
+
+        return WarehouseResource::collection($query->paginate(20));
+    }
+
+    public function store(StoreWarehouseRequest $request)
+    {
+        $data = $request->validated();
+        if (empty($data['code'])) {
+            $data['code'] = $this->generateCode();
+        }
+
+        $warehouse = DB::transaction(function () use ($data, $request) {
+            if (!empty($data['is_default'])) {
+                Warehouse::where('is_default', true)->update(['is_default' => false]);
+            }
+            return Warehouse::create($data);
+        });
+
+        ActivityLog::create([
+            'user_id' => $request->user()->id,
+            'action' => 'created_warehouse',
+            'description' => "Created warehouse: {$warehouse->name}",
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        return (new WarehouseResource($warehouse))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    public function show(Warehouse $warehouse)
+    {
+        return new WarehouseResource(
+            $warehouse->loadCount('batches')
+        );
+    }
+
+    public function update(UpdateWarehouseRequest $request, Warehouse $warehouse)
+    {
+        $data = $request->validated();
+
+        DB::transaction(function () use ($data, $warehouse) {
+            if (!empty($data['is_default'])) {
+                Warehouse::where('id', '!=', $warehouse->id)
+                    ->where('is_default', true)
+                    ->update(['is_default' => false]);
+            }
+            $warehouse->update($data);
+        });
+
+        return new WarehouseResource($warehouse);
+    }
+
+    public function destroy(Request $request, Warehouse $warehouse)
+    {
+        if ($warehouse->batches()->exists()) {
+            return response()->json([
+                'message' => 'Cannot delete warehouse with associated batches.',
+            ], 422);
+        }
+
+        if ($warehouse->is_default) {
+            return response()->json([
+                'message' => 'Cannot delete the default warehouse.',
+            ], 422);
+        }
+
+        $warehouse->delete();
+
+        return response()->noContent();
+    }
+
+    private function generateCode(): string
+    {
+        $count = Warehouse::withTrashed()->count() + 1;
+        return 'WH-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+    }
+}
