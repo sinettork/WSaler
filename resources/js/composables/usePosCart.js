@@ -9,17 +9,19 @@ import { reactive, computed, ref } from 'vue';
  *
  * Cart line shape:
  *   {
- *     id: string,                  // local uuid (for list keys)
+ *     id: string,                       // local uuid (for list keys)
  *     product_id: number,
  *     product_name: string,
  *     product_sku: string,
  *     variation_id: number | null,
+ *     variation_label: string | null,   // e.g. "24-Pack" for display
+ *     quantity_multiplier: number,      // base units per sold unit (1 for non-variations)
  *     unit_id: number,
  *     unit_name: string,
  *     quantity: number,
- *     unit_price: number,
+ *     unit_price: number,               // price per sold unit (pack price for variations)
  *     discount: number,
- *     stock: number,                // available stock for validation
+ *     stock: number | null,
  *   }
  */
 export function usePosCart() {
@@ -45,28 +47,21 @@ export function usePosCart() {
         round2(payments.value.reduce((sum, p) => sum + Number(p.amount || 0), 0))
     );
 
-    // Positive = customer owes more, negative = change due
     const balance = computed(() => round2(total.value - paid.value));
-
     const changeDue = computed(() => (balance.value < 0 ? Math.abs(balance.value) : 0));
-
     const remainingToPay = computed(() => (balance.value > 0 ? balance.value : 0));
-
     const itemCount = computed(() =>
         lines.value.reduce((sum, l) => sum + Number(l.quantity || 0), 0)
     );
-
     const isEmpty = computed(() => lines.value.length === 0);
 
-    /* ---------------- mutations ---------------- */
-
-    function addLine(product, unit, quantity = 1, unitPrice = null) {
-        const variationId = product.variation_id ?? null;
+    function addLine(product, variation = null, unit = null, quantity = 1, unitPrice = null) {
+        const variationId = variation?.id ?? product.variation_id ?? null;
         const unitId = unit?.id ?? product.unit_id ?? null;
         const unitName = unit?.name ?? product.unit_name ?? '';
-        const price = unitPrice ?? pickDefaultPrice(product);
+        const multiplier = Math.max(1, Number(variation?.quantity_multiplier ?? 1));
+        const price = unitPrice ?? pickPrice(product, variation);
 
-        // If the same product + variation + unit is already in the cart, increment qty
         const existing = lines.value.find(
             (l) => l.product_id === product.id && l.variation_id === variationId && l.unit_id === unitId
         );
@@ -82,6 +77,8 @@ export function usePosCart() {
             product_name: product.name,
             product_sku: product.sku ?? '',
             variation_id: variationId,
+            variation_label: variation?.value ?? null,
+            quantity_multiplier: multiplier,
             unit_id: unitId,
             unit_name: unitName,
             quantity: Number(quantity),
@@ -169,10 +166,7 @@ export function usePosCart() {
         discount.value = 0;
         tax.value = 0;
         notes.value = '';
-        // warehouse is intentionally retained — usually stays the same shift
     }
-
-    /* ---------------- helpers ---------------- */
 
     function findLine(lineId) {
         return lines.value.find((l) => l.id === lineId);
@@ -182,8 +176,19 @@ export function usePosCart() {
         return round2(Number(line.quantity) * Number(line.unit_price) - Number(line.discount || 0));
     }
 
-    function pickDefaultPrice(product) {
-        // Try common wholesale price fields in priority order
+    /**
+     * Pick the unit price. For variations we compute the pack price
+     * (wholesale_price x multiplier + additional_price) so the customer
+     * is charged for the full pack, not per-piece.
+     */
+    function pickPrice(product, variation) {
+        if (variation) {
+            const wholesale = Number(product.wholesale_price ?? 0);
+            const additional = Number(variation.additional_price ?? 0);
+            const multiplier = Math.max(1, Number(variation.quantity_multiplier ?? 1));
+            return wholesale * multiplier + additional;
+        }
+        // No variation: use product wholesale_price
         const candidates = [
             product.wholesale_price,
             product.retail_price,
@@ -195,6 +200,10 @@ export function usePosCart() {
             if (Number.isFinite(n) && n > 0) return n;
         }
         return 0;
+    }
+
+    function pickDefaultPrice(product) {
+        return pickPrice(product, null);
     }
 
     function round2(n) {
@@ -228,7 +237,6 @@ export function usePosCart() {
     }
 
     return {
-        // state
         lines,
         customer,
         warehouse,
@@ -236,8 +244,6 @@ export function usePosCart() {
         discount,
         tax,
         notes,
-
-        // computed
         subtotal,
         total,
         paid,
@@ -246,8 +252,6 @@ export function usePosCart() {
         remainingToPay,
         itemCount,
         isEmpty,
-
-        // mutations
         addLine,
         removeLine,
         updateLineQuantity,
@@ -261,8 +265,6 @@ export function usePosCart() {
         setDiscount,
         setTax,
         clear,
-
-        // helpers
         buildPayload,
         lineTotal,
     };
