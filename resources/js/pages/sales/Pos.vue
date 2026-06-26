@@ -50,7 +50,7 @@
                     <EmptyState
                         v-else-if="searchResults.length === 0 && search"
                         title="No products found"
-                        :description="`Nothing matches ${search}`"
+                        :description="`Nothing matches ${search}.`"
                         icon="search"
                     />
                     <EmptyState
@@ -60,33 +60,71 @@
                         icon="inbox"
                     />
                     <ul v-else class="divide-y divide-slate-100">
-                        <li v-for="p in searchResults" :key="p.id">
-                            <button
-                                type="button"
-                                class="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                                :disabled="p.total_stock !== undefined && p.total_stock <= 0"
-                                @click="addProduct(p)"
-                            >
-                                <div class="shrink-0 w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                                    </svg>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-medium text-slate-900 truncate">{{ p.name }}</p>
-                                    <p class="text-xs text-slate-500">
-                                        {{ p.sku || '\u2014' }}
-                                        <span v-if="p.category"> \u00b7 {{ p.category.name }}</span>
-                                    </p>
-                                </div>
-                                <div class="text-right shrink-0">
-                                    <p class="font-semibold text-slate-900">{{ formatCurrency(priceFor(p)) }}</p>
-                                    <p class="text-xs" :class="(p.total_stock ?? 0) > 0 ? 'text-slate-500' : 'text-rose-600'">
-                                        {{ (p.total_stock ?? 0) > 0 ? `${p.total_stock} in stock` : 'Out of stock' }}
-                                    </p>
-                                </div>
-                            </button>
-                        </li>
+                        <template v-for="p in searchResults" :key="p.id">
+                            <!-- Product without variations: one clickable row -->
+                            <li v-if="!p.variations || p.variations.length === 0">
+                                <button
+                                    type="button"
+                                    class="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    :disabled="(p.total_stock ?? 0) <= 0"
+                                    @click="addProduct(p)"
+                                >
+                                    <div class="shrink-0 w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-medium text-slate-900 truncate">{{ p.name }}</p>
+                                        <p class="text-xs text-slate-500">
+                                            {{ p.sku || '\u2014' }}
+                                            <span v-if="p.category"> \u00b7 {{ p.category.name }}</span>
+                                        </p>
+                                    </div>
+                                    <div class="text-right shrink-0">
+                                        <p class="font-semibold text-slate-900">{{ formatCurrency(priceFor(p)) }}</p>
+                                        <p class="text-xs" :class="(p.total_stock ?? 0) > 0 ? 'text-slate-500' : 'text-rose-600'">
+                                            {{ (p.total_stock ?? 0) > 0 ? `${p.total_stock} in stock` : 'Out of stock' }}
+                                        </p>
+                                    </div>
+                                </button>
+                            </li>
+
+                            <!-- Product with variations: one row per variation -->
+                            <template v-else>
+                                <li v-for="v in p.variations" :key="`${p.id}-${v.id}`">
+                                    <button
+                                        type="button"
+                                        class="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        :disabled="(p.total_stock ?? 0) <= 0"
+                                        @click="addProduct(p, v)"
+                                    >
+                                        <div class="shrink-0 w-10 h-10 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                            </svg>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="font-medium text-slate-900 truncate">
+                                                {{ p.name }}
+                                                <span class="text-slate-500 font-normal">\u2014 {{ v.value }}</span>
+                                            </p>
+                                            <p class="text-xs text-slate-500 truncate">
+                                                <span v-if="v.barcode">{{ v.barcode }} \u00b7 </span>
+                                                <span v-if="v.sku_suffix">SKU: {{ v.sku_suffix }} \u00b7 </span>
+                                                <span v-if="(v.quantity_multiplier ?? 1) > 1" class="font-medium text-brand-600">\u00d7{{ v.quantity_multiplier }} base units</span>
+                                            </p>
+                                        </div>
+                                        <div class="text-right shrink-0">
+                                            <p class="font-semibold text-slate-900">{{ formatCurrency(priceFor(p, v)) }}</p>
+                                            <p class="text-xs" :class="(p.total_stock ?? 0) > 0 ? 'text-slate-500' : 'text-rose-600'">
+                                                {{ (p.total_stock ?? 0) > 0 ? `${p.total_stock} in stock` : 'Out of stock' }}
+                                            </p>
+                                        </div>
+                                    </button>
+                                </li>
+                            </template>
+                        </template>
                     </ul>
                 </div>
             </div>
@@ -168,8 +206,16 @@
                             <li v-for="line in cart.lines.value" :key="line.id" class="px-4 py-3">
                                 <div class="flex items-start gap-2">
                                     <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-slate-900 truncate">{{ line.product_name }}</p>
-                                        <p class="text-xs text-slate-500">{{ line.unit_name }} \u00b7 {{ line.product_sku }}</p>
+                                        <p class="text-sm font-medium text-slate-900 truncate">
+                                            {{ line.product_name }}
+                                            <span v-if="line.variation_label" class="text-slate-500 font-normal">\u2014 {{ line.variation_label }}</span>
+                                        </p>
+                                        <p class="text-xs text-slate-500">
+                                            {{ line.unit_name }} \u00b7 {{ line.product_sku }}
+                                            <span v-if="(line.quantity_multiplier ?? 1) > 1" class="ml-1 px-1.5 py-0.5 rounded bg-brand-50 text-brand-700 font-medium">
+                                                \u00d7{{ line.quantity_multiplier }} base units each
+                                            </span>
+                                        </p>
                                     </div>
                                     <button type="button" class="text-slate-400 hover:text-rose-600" aria-label="Remove line" @click="cart.removeLine(line.id)">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -355,7 +401,18 @@ const paymentMethods = [
 let searchDebounce = null;
 let customerDebounce = null;
 
-function priceFor(p) {
+/**
+ * Compute the sell price. For a variation (pack), price = product.wholesale_price
+ * x multiplier + variation.additional_price. For a plain product, use
+ * wholesale_price (or retail/distributor as fallbacks).
+ */
+function priceFor(p, variation = null) {
+    if (variation) {
+        const wholesale = Number(p.wholesale_price ?? 0);
+        const additional = Number(variation.additional_price ?? 0);
+        const multiplier = Math.max(1, Number(variation.quantity_multiplier ?? 1));
+        return wholesale * multiplier + additional;
+    }
     return Number(p.wholesale_price ?? p.retail_price ?? p.distributor_price ?? 0);
 }
 
@@ -399,17 +456,39 @@ async function runSearch() {
 async function onSearchEnter() {
     clearTimeout(searchDebounce);
     await runSearch();
-    if (searchResults.value.length === 1) {
-        addProduct(searchResults.value[0]);
+    // Auto-add only if there is exactly one sellable item
+    const flat = flattenResults(searchResults.value);
+    if (flat.length === 1) {
+        addProduct(flat[0].product, flat[0].variation);
     }
 }
 
-function addProduct(p) {
+/**
+ * Flatten the search results into a list of clickable items. A product
+ * without variations yields one item; a product with variations yields
+ * one item per active variation.
+ */
+function flattenResults(products) {
+    const items = [];
+    for (const p of products) {
+        const vars = (p.variations || []).filter((v) => v.is_active !== false);
+        if (vars.length === 0) {
+            items.push({ product: p, variation: null });
+        } else {
+            for (const v of vars) {
+                items.push({ product: p, variation: v });
+            }
+        }
+    }
+    return items;
+}
+
+function addProduct(p, variation = null) {
     if (!p || (p.total_stock !== undefined && Number(p.total_stock) <= 0)) {
         toast.warning(`${p?.name || 'Product'} is out of stock.`);
         return;
     }
-    cart.addLine(p, null, 1, priceFor(p));
+    cart.addLine(p, variation, null, 1, null);
     search.value = '';
     searchResults.value = [];
     nextTick(() => searchInputRef.value?.focus());
