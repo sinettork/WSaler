@@ -19,7 +19,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'role', 'branch_id', 'warehouse_ids', 'customer_ids', 'employment_status', 'team_id', 'two_factor_secret', 'two_factor_enabled', 'password_changed_at', 'login_attempts', 'locked_until'])]
+#[Fillable(['name', 'email', 'password', 'role', 'branch_id', 'warehouse_ids', 'employment_status', 'team_id', 'two_factor_secret', 'two_factor_enabled', 'password_changed_at', 'login_attempts', 'locked_until'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable
 {
@@ -38,7 +38,6 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => UserRole::class,
             'warehouse_ids' => 'array',
-            'customer_ids' => 'array',
             'employment_status' => EmploymentStatus::class,
             'two_factor_enabled' => 'boolean',
             'password_changed_at' => 'datetime',
@@ -59,11 +58,6 @@ class User extends Authenticatable
     public function warehouses(): HasMany
     {
         return $this->hasMany(Warehouse::class, 'id', 'warehouse_ids');
-    }
-
-    public function customers(): HasMany
-    {
-        return $this->hasMany(Customer::class, 'id', 'customer_ids');
     }
 
     public function team(): BelongsTo
