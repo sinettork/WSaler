@@ -24,6 +24,9 @@
                     {{ value ? 'Active' : 'Inactive' }}
                 </BaseBadge>
             </template>
+            <template #cell-address="{ row }">
+                <span class="text-sm text-slate-600">{{ formatAddress(row) }}</span>
+            </template>
             <template #cell-actions="{ row }">
                 <div class="flex items-center gap-2">
                     <BaseButton v-if="auth.hasRole(['admin','manager'])" size="sm" variant="secondary" @click.stop="$router.push({ name: 'master.suppliers.edit', params: { id: row.id } })">Edit</BaseButton>
@@ -66,9 +69,20 @@ const columns = [
     { key: 'contact_person', label: 'Contact' },
     { key: 'email', label: 'Email' },
     { key: 'phone', label: 'Phone' },
+    { key: 'address', label: 'Address' },
     { key: 'is_active', label: 'Status' },
     { key: 'actions', label: 'Actions' },
 ];
+
+function formatAddress(c) {
+    const parts = [];
+    if (c.address) parts.push(c.address);
+    if (c.village?.name) parts.push(c.village.name);
+    if (c.commune?.name) parts.push(c.commune.name);
+    if (c.district?.name) parts.push(c.district.name);
+    if (c.province?.name) parts.push(c.province.name);
+    return parts.length ? parts.join(' • ') : '—';
+}
 
 const deleteTarget = ref(null);
 

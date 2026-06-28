@@ -1,7 +1,7 @@
 <template>
     <div class="space-y-6">
         <div v-if="store.loading && editing" class="flex justify-center py-16">
-            <Spinner size="lg" label="Loading supplier..." />
+            <Spinner size="lg" label="Loading warehouse..." />
         </div>
 
         <form v-else @submit.prevent="save" novalidate class="space-y-6">
@@ -10,20 +10,20 @@
                     <button
                         type="button"
                         class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-2"
-                        @click="$router.push('/master/suppliers')"
+                        @click="$router.push('/master/warehouses')"
                     >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                         </svg>
-                        Back to suppliers
+                        Back to warehouses
                     </button>
                     <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
-                        {{ editing ? `Update supplier: ${form.name || '\u2014'}` : 'Create supplier' }}
+                        {{ editing ? `Update warehouse: ${form.name || '\u2014'}` : 'Create warehouse' }}
                     </h1>
                     <p class="mt-1 text-sm text-slate-500">
                         {{ editing
-                            ? 'Update contact, address, or terms for this supplier.'
-                            : 'Add a new supplier. Contact and tax fields are optional but help with purchase orders.' }}
+                            ? 'Update warehouse details or change the default warehouse.'
+                            : 'Add a new stock location. The default warehouse is used for new stock movements.' }}
                     </p>
                 </div>
             </div>
@@ -34,17 +34,15 @@
                 </template>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <BaseInput v-model="form.name" name="name" label="Name" required :error="errors.name" @input="clearError('name')" />
-                    <BaseInput v-model="form.contact_person" name="contact_person" label="Contact person" :error="errors.contact_person" @input="clearError('contact_person')" />
+                    <BaseInput v-model="form.code" name="code" label="Code" :hint="editing ? '' : 'Auto-assigned if left blank.'" :error="errors.code" @input="clearError('code')" />
                 </div>
             </BaseCard>
 
             <BaseCard>
                 <template #header>
-                    <h2 class="text-sm font-semibold text-slate-900">Contact</h2>
+                    <h2 class="text-sm font-semibold text-slate-900">Contact &amp; location</h2>
                 </template>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <BaseInput v-model="form.email" name="email" type="email" label="Email" :error="errors.email" @input="clearError('email')" />
-                    <BaseInput v-model="form.phone" name="phone" label="Phone" :error="errors.phone" @input="clearError('phone')" />
                     <div class="md:col-span-2">
                         <AddressCascader
                             v-model="form.addresses"
@@ -52,40 +50,32 @@
                             :errors="errors"
                         />
                     </div>
+                    <BaseInput v-model="form.phone" name="phone" label="Phone" :error="errors.phone" @input="clearError('phone')" />
                 </div>
             </BaseCard>
 
             <BaseCard>
                 <template #header>
-                    <h2 class="text-sm font-semibold text-slate-900">Commercial terms</h2>
+                    <h2 class="text-sm font-semibold text-slate-900">Settings</h2>
                 </template>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <BaseInput v-model="form.tax_number" name="tax_number" label="Tax number" :error="errors.tax_number" @input="clearError('tax_number')" />
-                    <BaseInput v-model="form.payment_terms" name="payment_terms" label="Payment terms" placeholder="e.g. Net 30" :error="errors.payment_terms" @input="clearError('payment_terms')" />
-                    <div class="md:col-span-2">
-                        <label for="supplier-notes" class="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-                        <textarea
-                            id="supplier-notes"
-                            v-model="form.notes"
-                            name="notes"
-                            rows="2"
-                            class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:border-brand-500 focus:ring-brand-500"
-                            placeholder="Internal notes about this supplier"
-                        />
-                    </div>
+                <div class="space-y-3 pt-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input v-model="form.is_default" type="checkbox" class="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+                        <span class="text-sm text-slate-700">Default warehouse &mdash; used for new stock movements</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input v-model="form.is_active" type="checkbox" class="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+                        <span class="text-sm text-slate-700">Active &mdash; available for stock operations</span>
+                    </label>
                 </div>
-                <label class="flex items-center gap-2 cursor-pointer pt-4 mt-4 border-t border-slate-100">
-                    <input v-model="form.is_active" type="checkbox" class="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-                    <span class="text-sm text-slate-700">Active &mdash; available for purchase orders</span>
-                </label>
             </BaseCard>
 
             <div class="flex items-center justify-end gap-2 pt-2">
-                <BaseButton type="button" variant="secondary" @click="$router.push('/master/suppliers')">
+                <BaseButton type="button" variant="secondary" @click="$router.push('/master/warehouses')">
                     Cancel
                 </BaseButton>
                 <BaseButton type="submit" :loading="store.loading">
-                    {{ editing ? 'Save changes' : 'Create supplier' }}
+                    {{ editing ? 'Save changes' : 'Create warehouse' }}
                 </BaseButton>
             </div>
         </form>
@@ -95,7 +85,7 @@
 <script setup>
 import { reactive, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useSuppliersStore } from '@/stores/suppliers';
+import { useWarehousesStore } from '@/stores/warehouses';
 import { useToastStore } from '@/stores/toast';
 import { useFormErrors } from '@/composables/useFormErrors';
 import BaseButton from '@/components/ui/BaseButton.vue';
@@ -106,7 +96,7 @@ import AddressCascader from '@/components/AddressCascader.vue';
 
 const route = useRoute();
 const router = useRouter();
-const store = useSuppliersStore();
+const store = useWarehousesStore();
 const toast = useToastStore();
 const errors = reactive({});
 const { focusFirstError, clearErrors, clearError } = useFormErrors(errors);
@@ -114,9 +104,9 @@ const { focusFirstError, clearErrors, clearError } = useFormErrors(errors);
 const editing = computed(() => !!route.params.id);
 
 const form = reactive({
-    id: null, name: '', contact_person: '', email: '', phone: '',
+    id: null, code: '', name: '',
     addresses: { province_id: null, district_id: null, commune_id: null, village_id: null, address: '' },
-    tax_number: '', payment_terms: '', notes: '', is_active: true,
+    phone: '', is_default: false, is_active: true,
 });
 
 async function save() {
@@ -133,13 +123,14 @@ async function save() {
         delete payload.addresses;
         if (editing.value) {
             await store.update(form.id, payload);
-            toast.success('Supplier updated.');
+            toast.success('Warehouse updated.');
         } else {
             delete payload.id;
+            delete payload.code;
             await store.create(payload);
-            toast.success('Supplier created.');
+            toast.success('Warehouse created.');
         }
-        router.push('/master/suppliers');
+        router.push('/master/warehouses');
     } catch (e) {
         if (e.fieldErrors) {
             Object.assign(errors, e.fieldErrors);
@@ -155,10 +146,8 @@ onMounted(async () => {
         if (data) {
             Object.assign(form, {
                 id: data.id,
+                code: data.code || '',
                 name: data.name || '',
-                contact_person: data.contact_person || '',
-                email: data.email || '',
-                phone: data.phone || '',
                 addresses: {
                     province_id: data.province_id ?? null,
                     district_id: data.district_id ?? null,
@@ -166,9 +155,8 @@ onMounted(async () => {
                     village_id: data.village_id ?? null,
                     address: data.address || '',
                 },
-                tax_number: data.tax_number || '',
-                payment_terms: data.payment_terms || '',
-                notes: data.notes || '',
+                phone: data.phone || '',
+                is_default: data.is_default ?? false,
                 is_active: data.is_active ?? true,
             });
         }

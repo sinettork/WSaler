@@ -28,7 +28,7 @@ class WarehouseController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
-        $query->withCount('batches')->orderBy('name');
+        $query->with(['province', 'district', 'commune', 'village'])->withCount('batches')->orderBy('name');
 
         return WarehouseResource::collection($query->paginate(20));
     }
@@ -46,6 +46,7 @@ class WarehouseController extends Controller
             }
             return Warehouse::create($data);
         });
+        $warehouse->load(['province', 'district', 'commune', 'village']);
 
         ActivityLog::create([
             'user_id' => $request->user()->id,
@@ -63,7 +64,7 @@ class WarehouseController extends Controller
     public function show(Warehouse $warehouse)
     {
         return new WarehouseResource(
-            $warehouse->loadCount('batches')
+            $warehouse->loadCount('batches')->load(['province', 'district', 'commune', 'village'])
         );
     }
 
@@ -79,6 +80,7 @@ class WarehouseController extends Controller
             }
             $warehouse->update($data);
         });
+        $warehouse->load(['province', 'district', 'commune', 'village']);
 
         return new WarehouseResource($warehouse);
     }

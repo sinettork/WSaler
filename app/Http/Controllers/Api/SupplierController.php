@@ -31,7 +31,7 @@ class SupplierController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
-        $suppliers = $query->orderBy('name', 'asc')->paginate(15);
+        $suppliers = $query->with(['province', 'district', 'commune', 'village'])->orderBy('name', 'asc')->paginate(15);
 
         return SupplierResource::collection($suppliers)->response();
     }
@@ -40,6 +40,7 @@ class SupplierController extends Controller
     {
         $data = $request->validated();
         $supplier = Supplier::create($data);
+        $supplier->load(['province', 'district', 'commune', 'village']);
 
         ActivityLog::create([
             'user_id' => auth()->id(),
@@ -56,13 +57,14 @@ class SupplierController extends Controller
 
     public function show(Supplier $supplier): SupplierResource
     {
-        return new SupplierResource($supplier);
+        return new SupplierResource($supplier->load(['province', 'district', 'commune', 'village']));
     }
 
     public function update(UpdateSupplierRequest $request, Supplier $supplier): SupplierResource
     {
         $data = $request->validated();
         $supplier->update($data);
+        $supplier->load(['province', 'district', 'commune', 'village']);
 
         ActivityLog::create([
             'user_id' => auth()->id(),

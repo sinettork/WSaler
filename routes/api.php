@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CategoryController;
@@ -7,6 +8,14 @@ use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\SupplierController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
+
+// Cambodia address cascader (public — geographic reference data)
+Route::prefix('addresses')->group(function () {
+    Route::get('provinces', [AddressController::class, 'indexProvinces']);
+    Route::get('provinces/{province}/districts', [AddressController::class, 'indexDistricts']);
+    Route::get('districts/{district}/communes', [AddressController::class, 'indexCommunes']);
+    Route::get('communes/{commune}/villages', [AddressController::class, 'indexVillages']);
+});
 
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);

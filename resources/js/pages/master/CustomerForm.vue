@@ -70,14 +70,10 @@
                     <BaseInput v-model="form.email" name="email" type="email" label="Email" :error="errors.email" @input="clearError('email')" />
                     <BaseInput v-model="form.phone" name="phone" label="Phone" :error="errors.phone" @input="clearError('phone')" />
                     <div class="md:col-span-2">
-                        <label for="customer-address" class="block text-sm font-medium text-slate-700 mb-1">Address</label>
-                        <textarea
-                            id="customer-address"
-                            v-model="form.address"
-                            name="address"
-                            rows="2"
-                            class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:border-brand-500 focus:ring-brand-500"
-                            placeholder="Street, city, country"
+                        <AddressCascader
+                            v-model="form.addresses"
+                            :required="{ province: true, district: true, commune: true }"
+                            :errors="errors"
                         />
                     </div>
                 </div>
@@ -148,6 +144,7 @@ import BaseInput from '@/components/ui/BaseInput.vue';
 import BaseSelect from '@/components/ui/BaseSelect.vue';
 import BaseCard from '@/components/ui/BaseCard.vue';
 import Spinner from '@/components/ui/Spinner.vue';
+import AddressCascader from '@/components/AddressCascader.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -160,14 +157,23 @@ const editing = computed(() => !!route.params.id);
 
 const form = reactive({
     id: null, code: '', name: '', contact_person: '', email: '', phone: '',
-    address: '', type: 'retail', credit_limit: 0, current_balance: 0,
+    addresses: { province_id: null, district_id: null, commune_id: null, village_id: null, address: '' },
+    type: 'retail', credit_limit: 0, current_balance: 0,
     payment_terms: '', notes: '', is_active: true,
 });
 
 async function save() {
     clearErrors();
     try {
-        const payload = { ...form };
+        const payload = {
+            ...form,
+            province_id: form.addresses.province_id,
+            district_id: form.addresses.district_id,
+            commune_id: form.addresses.commune_id,
+            village_id: form.addresses.village_id,
+            address: form.addresses.address,
+        };
+        delete payload.addresses;
         if (editing.value) {
             await store.update(form.id, payload);
             toast.success('Customer updated.');
@@ -199,7 +205,13 @@ onMounted(async () => {
                 contact_person: data.contact_person || '',
                 email: data.email || '',
                 phone: data.phone || '',
-                address: data.address || '',
+                addresses: {
+                    province_id: data.province_id ?? null,
+                    district_id: data.district_id ?? null,
+                    commune_id: data.commune_id ?? null,
+                    village_id: data.village_id ?? null,
+                    address: data.address || '',
+                },
                 type: data.type || 'retail',
                 credit_limit: data.credit_limit ?? 0,
                 current_balance: data.current_balance ?? 0,

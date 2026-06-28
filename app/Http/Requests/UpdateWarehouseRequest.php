@@ -19,7 +19,11 @@ class UpdateWarehouseRequest extends FormRequest
         return [
             'name' => ['sometimes', 'string', 'max:100'],
             'code' => ['sometimes', 'nullable', 'string', 'max:20', Rule::unique('warehouses', 'code')->ignore($warehouseId)],
-            'address' => ['sometimes', 'nullable', 'string'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'province_id' => ['sometimes', 'nullable', 'exists:provinces,id'],
+            'district_id' => ['sometimes', 'nullable', 'exists:districts,id'],
+            'commune_id' => ['sometimes', 'nullable', 'exists:communes,id'],
+            'village_id' => ['sometimes', 'nullable', 'exists:villages,id'],
             'phone' => ['sometimes', 'nullable', 'string', 'max:30'],
             'is_default' => ['sometimes', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],

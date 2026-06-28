@@ -36,7 +36,7 @@ class CustomerController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
-        $customers = $query->orderBy('name', 'asc')->paginate(15);
+        $customers = $query->with(['province', 'district', 'commune', 'village'])->orderBy('name', 'asc')->paginate(15);
 
         return CustomerResource::collection($customers)->response();
     }
@@ -47,6 +47,7 @@ class CustomerController extends Controller
         $nextId = (Customer::max('id') ?? 0) + 1;
         $data['code'] = 'CUST-'.str_pad($nextId, 5, '0', STR_PAD_LEFT);
         $customer = Customer::create($data);
+        $customer->load(['province', 'district', 'commune', 'village']);
 
         ActivityLog::create([
             'user_id' => auth()->id(),
@@ -63,13 +64,14 @@ class CustomerController extends Controller
 
     public function show(Customer $customer): CustomerResource
     {
-        return new CustomerResource($customer);
+        return new CustomerResource($customer->load(['province', 'district', 'commune', 'village']));
     }
 
     public function update(UpdateCustomerRequest $request, Customer $customer): CustomerResource
     {
         $data = $request->validated();
         $customer->update($data);
+        $customer->load(['province', 'district', 'commune', 'village']);
 
         ActivityLog::create([
             'user_id' => auth()->id(),
