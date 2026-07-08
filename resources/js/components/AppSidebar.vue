@@ -16,7 +16,10 @@
             <router-link
                 v-if="auth.hasRole(['admin','manager','cashier','warehouse'])"
                 to="/pos"
-                class="flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-semibold transition-colors bg-brand-600 text-white hover:bg-brand-700"
+                class="flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-semibold transition-colors"
+                :class="isActive('/pos')
+                    ? 'bg-brand-600 text-white hover:bg-brand-700'
+                    : 'bg-brand-600/10 text-brand-600 hover:bg-brand-600 hover:text-white'"
             >
                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
@@ -103,7 +106,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useRoute } from 'vue-router';
 
@@ -158,7 +161,7 @@ const sections = [
         items: [
             { path: '/products', label: 'nav.products', icon: ICONS.cube, roles: null },
             { path: '/batches', label: 'nav.batches', icon: ICONS.inbox, roles: null },
-            { path: '/inventory/operations', label: 'Inventory operations', icon: ICONS.receipt, roles: null },
+            { path: '/inventory/operations', label: 'nav.inventoryOperations', icon: ICONS.receipt, roles: null },
             { path: '/units', label: 'nav.units', icon: ICONS.scale, roles: ['admin', 'manager'] },
             { path: '/warehouses', label: 'nav.warehouses', icon: ICONS.building, roles: ['admin', 'manager'] },
         ],
@@ -221,12 +224,25 @@ function loadExpanded() {
         // ignore parse errors
     }
 
+    // Auto-expand sections that contain the current active route
     for (const section of sections) {
         if (isSectionActive(section)) {
             expanded.value[section.id] = true;
         }
     }
 }
+
+// Watch for route changes and auto-expand relevant sections
+import { watch } from 'vue';
+
+watch(() => route.path, () => {
+    for (const section of sections) {
+        if (isSectionActive(section)) {
+            expanded.value[section.id] = true;
+            saveExpanded();
+        }
+    }
+});
 
 onMounted(loadExpanded);
 </script>
