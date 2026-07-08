@@ -2,14 +2,15 @@
     <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-brand-50 px-4 py-12">
         <div class="w-full max-w-md">
             <div class="flex flex-col items-center mb-8">
-                <div class="w-12 h-12 rounded-xl bg-brand-600 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-brand-600/20 mb-3">
+                <div class="w-12 h-12 rounded-lg bg-brand-600 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-brand-600/30 mb-3">
                     W
                 </div>
+                <div class="text-[10px] uppercase tracking-widest text-brand-700 font-semibold mb-1">Wholesale Operations</div>
                 <h1 class="text-2xl font-bold text-slate-900">Welcome back</h1>
-                <p class="text-sm text-slate-500 mt-1">Sign in to your Wholesale account</p>
+                <p class="text-sm text-slate-500 mt-1">Sign in to continue · <span class="font-km">សូមចូលគណនីរបស់អ្នក</span></p>
             </div>
 
-            <div class="bg-white rounded-2xl shadow-xl shadow-slate-900/5 ring-1 ring-slate-200 p-8">
+            <div class="bg-white rounded-lg shadow-xl shadow-slate-900/5 ring-1 ring-slate-200 p-8">
                 <form @submit.prevent="handleLogin" novalidate class="space-y-5">
                     <BaseInput
                         id="email"
@@ -36,7 +37,7 @@
 
                     <div
                         v-if="topError"
-                        class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700 flex items-start gap-2"
+                        class="rounded-md bg-status-critical-bg border border-status-critical/30 px-4 py-3 text-sm text-status-critical flex items-start gap-2 font-mono"
                         role="alert"
                     >
                         <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

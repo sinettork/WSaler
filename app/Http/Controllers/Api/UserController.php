@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\UserResource;
+use App\Enums\UserRole;
 use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -82,12 +83,37 @@ class UserController extends Controller
             return response()->json(['message' => 'Cannot delete your own account.'], 422);
         }
 
+        // F5: prevent lockout — block deletion of the last active administrator.
+        if ($user->role === UserRole::Administrator || $user->role === UserRole::Administrator->value) {
+            $otherActiveAdmins = User::query()
+                ->where('id', '!=', $user->id)
+                ->where(function ($q) {
+                    $q->where('role', UserRole::Administrator->value)
+                      ->orWhere('role', UserRole::Administrator);
+                })
+                ->where(function ($q) {
+                    $q->whereNull('employment_status')
+                      ->orWhere('employment_status', 'active');
+                })
+                ->count();
+
+            if ($otherActiveAdmins < 1) {
+                return response()->json([
+                    'message' => 'Cannot delete the last active administrator. Promote another user first.',
+                ], 422);
+            }
+        }
+
         $user->delete();
 
         ActivityLog::create([
             'user_id' => $request->user()->id,
             'action' => 'deleted_user',
             'description' => "Deleted user {$user->email}",
+            'module' => 'auth',
+            'resource_type' => User::class,
+            'resource_id' => $user->id,
+            'event' => 'deleted',
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);

@@ -15,11 +15,11 @@ export const useProductsStore = defineStore('products', {
     active: (state) => state.items.filter((p) => p.status === 'active'),
   },
   actions: {
-    async fetch(params = {}) {
+    async fetch(params = {}, options = {}) {
       this.loading = true;
       this.error = null;
       try {
-        const res = await api.get('/products', { params });
+        const res = await api.get('/products', { params, silent: options.silent === true });
         this.items = res.data.data || [];
         this.pagination = {
           current_page: res.data.meta?.current_page || 1,

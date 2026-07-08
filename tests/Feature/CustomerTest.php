@@ -15,14 +15,24 @@ class CustomerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $this->artisan('db:seed', ['--class' => \Database\Seeders\RolePermissionSeeder::class]);
     }
 
     protected function actingAsRole(string $role): string
     {
-        $user = User::where('role', $role)->first();
-        $token = $user->createToken('test')->plainTextToken;
-        return $token;
+        $user = User::factory()->create(['role' => $role]);
+        $spatieRole = match ($role) {
+            'admin' => 'administrator',
+            'manager' => 'manager',
+            'cashier' => 'cashier',
+            'warehouse' => 'warehouse_staff',
+            'purchasing' => 'purchasing_staff',
+            'delivery' => 'delivery_staff',
+            'salesperson' => 'sales_staff',
+            default => 'cashier',
+        };
+        $user->assignRole($spatieRole);
+        return $user->createToken('test')->plainTextToken;
     }
 
     public function test_admin_can_list_customers(): void
@@ -62,15 +72,18 @@ class CustomerTest extends TestCase
         $this->assertDatabaseHas('customers', ['email' => 'customer@example.com']);
     }
 
-    public function test_cashier_cannot_create_customer(): void
+    public function test_cashier_can_create_customer(): void
     {
         $token = $this->actingAsRole(UserRole::Cashier->value);
         $response = $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson('/api/customers', [
-                'name' => 'Bad',
-                'email' => 'bad@example.com',
+                'name' => 'Cashier Customer',
+                'email' => 'cashier-customer@example.com',
+                'type' => 'retail',
             ]);
-        $response->assertStatus(403);
+        $response->assertStatus(201)
+            ->assertJsonPath('data.name', 'Cashier Customer');
+        $this->assertDatabaseHas('customers', ['email' => 'cashier-customer@example.com']);
     }
 
     public function test_store_validates_required_fields(): void

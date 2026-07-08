@@ -5,124 +5,178 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\SupplierController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
-// Cambodia address cascader (public — geographic reference data)
-Route::prefix('addresses')->group(function () {
-    Route::get('provinces', [AddressController::class, 'indexProvinces']);
-    Route::get('provinces/{province}/districts', [AddressController::class, 'indexDistricts']);
-    Route::get('districts/{district}/communes', [AddressController::class, 'indexCommunes']);
-    Route::get('communes/{commune}/villages', [AddressController::class, 'indexVillages']);
-});
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Rate limiting is applied via middleware (60 requests/min for general API,
+| 5 requests/min for authentication endpoints).
+|
+*/
 
-Route::prefix('auth')->group(function () {
-    Route::post('login', [AuthController::class, 'login']);
-    Route::post('register', [AuthController::class, 'register']);
+// Public routes (no authentication required)
+Route::group([], function () {
+    // Cambodia address cascader (public — geographic reference data)
+    Route::prefix('addresses')->group(function () {
+        Route::get('provinces', [AddressController::class, 'indexProvinces']);
+        Route::get('provinces/{province}/districts', [AddressController::class, 'indexDistricts']);
+        Route::get('districts/{district}/communes', [AddressController::class, 'indexCommunes']);
+        Route::get('communes/{commune}/villages', [AddressController::class, 'indexVillages']);
+    });
 
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::post('logout', [AuthController::class, 'logout']);
-        Route::get('me', [AuthController::class, 'me']);
+    // Authentication routes (stricter rate limiting)
+    Route::prefix('auth')->middleware('throttle:auth')->group(function () {
+        Route::post('login', [AuthController::class, 'login']);
+        Route::post('register', [AuthController::class, 'register']);
+
+        // Authenticated auth routes
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::post('logout', [AuthController::class, 'logout']);
+            Route::get('me', [AuthController::class, 'me']);
+        });
     });
 });
 
-Route::middleware(['auth:sanctum'])->prefix('users')->group(function () {
-    Route::get('/', [UserController::class, 'index'])->middleware('role:admin,manager');
-    Route::post('/', [UserController::class, 'store'])->middleware('role:admin');
-    Route::get('{user}', [UserController::class, 'show'])->middleware('role:admin,manager');
-    Route::put('{user}', [UserController::class, 'update'])->middleware('role:admin');
-    Route::delete('{user}', [UserController::class, 'destroy'])->middleware('role:admin');
-});
+// API - Protected routes (require authentication)
+Route::middleware(['auth:sanctum'])->group(function () {
 
-Route::middleware(['auth:sanctum'])->prefix('categories')->group(function () {
-    Route::get('/', [CategoryController::class, 'index'])->middleware('role:admin,manager,cashier,warehouse,purchasing');
-    Route::post('/', [CategoryController::class, 'store'])->middleware('role:admin,manager');
-    Route::get('{category}', [CategoryController::class, 'show'])->middleware('role:admin,manager,cashier,warehouse,purchasing');
-    Route::put('{category}', [CategoryController::class, 'update'])->middleware('role:admin,manager');
-    Route::delete('{category}', [CategoryController::class, 'destroy'])->middleware('role:admin,manager');
-});
+    Route::prefix('users')->group(function () {
+        Route::get('/', [UserController::class, 'index'])->middleware('permission:view users');
+        Route::post('/', [UserController::class, 'store'])->middleware('permission:create users');
+        Route::get('{user}', [UserController::class, 'show'])->middleware('permission:view users');
+        Route::put('{user}', [UserController::class, 'update'])->middleware('permission:edit users');
+        Route::delete('{user}', [UserController::class, 'destroy'])->middleware('permission:delete users');
+    });
 
-Route::middleware(['auth:sanctum'])->prefix('brands')->group(function () {
-    Route::get('/', [BrandController::class, 'index'])->middleware('role:admin,manager,cashier');
-    Route::post('/', [BrandController::class, 'store'])->middleware('role:admin,manager');
-    Route::get('{brand}', [BrandController::class, 'show'])->middleware('role:admin,manager,cashier');
-    Route::put('{brand}', [BrandController::class, 'update'])->middleware('role:admin,manager');
-    Route::delete('{brand}', [BrandController::class, 'destroy'])->middleware('role:admin,manager');
-});
+    Route::prefix('categories')->group(function () {
+        Route::get('/', [CategoryController::class, 'index'])->middleware('permission:view products');
+        Route::get('/tree', [CategoryController::class, 'tree'])->middleware('permission:view products');
+        Route::post('/', [CategoryController::class, 'store'])->middleware('permission:create products');
+        Route::get('{category}', [CategoryController::class, 'show'])->middleware('permission:view products');
+        Route::put('{category}', [CategoryController::class, 'update'])->middleware('permission:edit products');
+        Route::delete('{category}', [CategoryController::class, 'destroy'])->middleware('permission:delete products');
+    });
 
-Route::middleware(['auth:sanctum'])->prefix('suppliers')->group(function () {
-    Route::get('/', [SupplierController::class, 'index'])->middleware('role:admin,manager,cashier,warehouse,purchasing');
-    Route::post('/', [SupplierController::class, 'store'])->middleware('role:admin,manager');
-    Route::get('{supplier}', [SupplierController::class, 'show'])->middleware('role:admin,manager,cashier,warehouse,purchasing');
-    Route::put('{supplier}', [SupplierController::class, 'update'])->middleware('role:admin,manager');
-    Route::delete('{supplier}', [SupplierController::class, 'destroy'])->middleware('role:admin,manager');
-});
+    Route::prefix('brands')->group(function () {
+        Route::get('/', [BrandController::class, 'index'])->middleware('permission:view products');
+        Route::post('/', [BrandController::class, 'store'])->middleware('permission:create products');
+        Route::get('{brand}', [BrandController::class, 'show'])->middleware('permission:view products');
+        Route::put('{brand}', [BrandController::class, 'update'])->middleware('permission:edit products');
+        Route::delete('{brand}', [BrandController::class, 'destroy'])->middleware('permission:delete products');
+    });
 
-Route::middleware(['auth:sanctum'])->prefix('customers')->group(function () {
-    Route::get('/', [CustomerController::class, 'index'])->middleware('role:admin,manager,cashier');
-    Route::post('/', [CustomerController::class, 'store'])->middleware('role:admin,manager');
-    Route::get('{customer}', [CustomerController::class, 'show'])->middleware('role:admin,manager,cashier');
-    Route::put('{customer}', [CustomerController::class, 'update'])->middleware('role:admin,manager');
-    Route::delete('{customer}', [CustomerController::class, 'destroy'])->middleware('role:admin,manager');
-});
+    Route::prefix('suppliers')->group(function () {
+        Route::get('/', [SupplierController::class, 'index'])->middleware('permission:view suppliers');
+        Route::post('/', [SupplierController::class, 'store'])->middleware('permission:create suppliers');
+        Route::get('{supplier}', [SupplierController::class, 'show'])->middleware('permission:view suppliers');
+        Route::put('{supplier}', [SupplierController::class, 'update'])->middleware('permission:edit suppliers');
+        Route::delete('{supplier}', [SupplierController::class, 'destroy'])->middleware('permission:delete suppliers');
+    });
 
-// Units
-Route::middleware('auth:sanctum')->prefix('units')->group(function () {
-    Route::get('/', [\App\Http\Controllers\Api\UnitController::class, 'index']);
-    Route::post('/', [\App\Http\Controllers\Api\UnitController::class, 'store'])->middleware('role:admin,manager');
-    Route::put('/{unit}', [\App\Http\Controllers\Api\UnitController::class, 'update'])->middleware('role:admin,manager');
-    Route::delete('/{unit}', [\App\Http\Controllers\Api\UnitController::class, 'destroy'])->middleware('role:admin');
-});
+    Route::prefix('customers')->group(function () {
+        Route::get('/', [CustomerController::class, 'index'])->middleware('permission:view customers');
+        Route::post('/', [CustomerController::class, 'store'])->middleware('permission:create customers');
+        Route::get('{customer}', [CustomerController::class, 'show'])->middleware('permission:view customers');
+        Route::put('{customer}', [CustomerController::class, 'update'])->middleware('permission:edit customers');
+        Route::delete('{customer}', [CustomerController::class, 'destroy'])->middleware('permission:delete customers');
+    });
 
-// Warehouses
-Route::middleware('auth:sanctum')->prefix('warehouses')->group(function () {
-    Route::get('/', [\App\Http\Controllers\Api\WarehouseController::class, 'index']);
-    Route::post('/', [\App\Http\Controllers\Api\WarehouseController::class, 'store'])->middleware('role:admin,manager');
-    Route::get('/{warehouse}', [\App\Http\Controllers\Api\WarehouseController::class, 'show']);
-    Route::put('/{warehouse}', [\App\Http\Controllers\Api\WarehouseController::class, 'update'])->middleware('role:admin,manager');
-    Route::delete('/{warehouse}', [\App\Http\Controllers\Api\WarehouseController::class, 'destroy'])->middleware('role:admin');
-});
+    // Units
+    Route::prefix('units')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\UnitController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Api\UnitController::class, 'store'])->middleware('permission:create products');
+        Route::put('/{unit}', [\App\Http\Controllers\Api\UnitController::class, 'update'])->middleware('permission:edit products');
+        Route::delete('/{unit}', [\App\Http\Controllers\Api\UnitController::class, 'destroy'])->middleware('permission:delete products');
+    });
 
-// Products
-Route::middleware('auth:sanctum')->prefix('products')->group(function () {
-    Route::get('/lookup', [\App\Http\Controllers\Api\ProductController::class, 'lookup']);
-    Route::get('/', [\App\Http\Controllers\Api\ProductController::class, 'index']);
-    Route::post('/', [\App\Http\Controllers\Api\ProductController::class, 'store'])->middleware('role:admin,manager');
-    Route::get('/{product}', [\App\Http\Controllers\Api\ProductController::class, 'show']);
-    Route::put('/{product}', [\App\Http\Controllers\Api\ProductController::class, 'update'])->middleware('role:admin,manager');
-    Route::delete('/{product}', [\App\Http\Controllers\Api\ProductController::class, 'destroy'])->middleware('role:admin,manager');
+    // Warehouses
+    Route::prefix('warehouses')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\WarehouseController::class, 'index'])->middleware('permission:view warehouses');
+        Route::post('/', [\App\Http\Controllers\Api\WarehouseController::class, 'store'])->middleware('permission:create warehouses');
+        Route::get('/{warehouse}', [\App\Http\Controllers\Api\WarehouseController::class, 'show'])->middleware('permission:view warehouses');
+        Route::put('/{warehouse}', [\App\Http\Controllers\Api\WarehouseController::class, 'update'])->middleware('permission:edit warehouses');
+        Route::delete('/{warehouse}', [\App\Http\Controllers\Api\WarehouseController::class, 'destroy'])->middleware('permission:delete warehouses');
+    });
 
-    Route::post('/{product}/variations', [\App\Http\Controllers\Api\ProductVariationController::class, 'store'])->middleware('role:admin,manager');
-    Route::put('/{product}/variations/{variation}', [\App\Http\Controllers\Api\ProductVariationController::class, 'update'])->middleware('role:admin,manager');
-    Route::delete('/{product}/variations/{variation}', [\App\Http\Controllers\Api\ProductVariationController::class, 'destroy'])->middleware('role:admin,manager');
-});
+    // Products
+    Route::prefix('products')->group(function () {
+        Route::get('/lookup', [\App\Http\Controllers\Api\ProductController::class, 'lookup'])->middleware('permission:view products');
+        Route::get('/lookup/barcode', [\App\Http\Controllers\Api\ProductController::class, 'lookupBarcode'])->middleware('permission:view products');
+        Route::get('/', [\App\Http\Controllers\Api\ProductController::class, 'index'])->middleware('permission:view products');
+        Route::post('/', [\App\Http\Controllers\Api\ProductController::class, 'store'])->middleware('permission:create products');
+        Route::get('/{product}', [\App\Http\Controllers\Api\ProductController::class, 'show'])->middleware('permission:view products');
+        Route::get('/{product}/pos-batches', [\App\Http\Controllers\Api\ProductController::class, 'posBatches'])->middleware('permission:view batches');
+        Route::put('/{product}', [\App\Http\Controllers\Api\ProductController::class, 'update'])->middleware('permission:edit products');
+        Route::delete('/{product}', [\App\Http\Controllers\Api\ProductController::class, 'destroy'])->middleware('permission:delete products');
 
-// Batches
-Route::middleware('auth:sanctum')->prefix('batches')->group(function () {
-    Route::get('/expiring', [\App\Http\Controllers\Api\BatchController::class, 'expiringSoon']);
-    Route::get('/expired', [\App\Http\Controllers\Api\BatchController::class, 'expired']);
-    Route::get('/', [\App\Http\Controllers\Api\BatchController::class, 'index']);
-    Route::post('/', [\App\Http\Controllers\Api\BatchController::class, 'store'])->middleware('role:admin,manager,warehouse,purchasing');
-    Route::get('/{batch}', [\App\Http\Controllers\Api\BatchController::class, 'show']);
-    Route::put('/{batch}', [\App\Http\Controllers\Api\BatchController::class, 'update'])->middleware('role:admin,manager,warehouse');
-    Route::delete('/{batch}', [\App\Http\Controllers\Api\BatchController::class, 'destroy'])->middleware('role:admin,manager');
-});
+        Route::post('/{product}/variations', [\App\Http\Controllers\Api\ProductVariationController::class, 'store'])->middleware('permission:create products');
+        Route::put('/{product}/variations/{variation}', [\App\Http\Controllers\Api\ProductVariationController::class, 'update'])->middleware('permission:edit products');
+        Route::delete('/{product}/variations/{variation}', [\App\Http\Controllers\Api\ProductVariationController::class, 'destroy'])->middleware('permission:delete products');
+    });
 
-// Sales (POS + history)
-Route::middleware('auth:sanctum')->prefix('sales')->group(function () {
-    Route::get('/', [\App\Http\Controllers\Api\Sales\SaleController::class, 'index'])
-        ->middleware('role:admin,manager,cashier,warehouse');
-    Route::post('/', [\App\Http\Controllers\Api\Sales\SaleController::class, 'store'])
-        ->middleware('role:admin,manager,cashier,warehouse');
-    Route::get('{sale}', [\App\Http\Controllers\Api\Sales\SaleController::class, 'show'])
-        ->middleware('role:admin,manager,cashier,warehouse');
-    Route::post('{sale}/void', [\App\Http\Controllers\Api\Sales\SaleController::class, 'void'])
-        ->middleware('role:admin,manager');
-});
+    // Batches
+    Route::prefix('batches')->group(function () {
+        Route::get('/expiring', [\App\Http\Controllers\Api\BatchController::class, 'expiringSoon'])->middleware('permission:view batches');
+        Route::get('/expired', [\App\Http\Controllers\Api\BatchController::class, 'expired'])->middleware('permission:view batches');
+        Route::get('/', [\App\Http\Controllers\Api\BatchController::class, 'index'])->middleware('permission:view batches');
+        Route::post('/', [\App\Http\Controllers\Api\BatchController::class, 'store'])->middleware('permission:create batches');
+        Route::get('/{batch}', [\App\Http\Controllers\Api\BatchController::class, 'show'])->middleware('permission:view batches');
+        Route::put('/{batch}', [\App\Http\Controllers\Api\BatchController::class, 'update'])->middleware('permission:edit batches');
+        Route::delete('/{batch}', [\App\Http\Controllers\Api\BatchController::class, 'destroy'])->middleware('permission:delete batches');
+    });
 
-// Stock movements (audit trail)
-Route::middleware('auth:sanctum')->prefix('stock-movements')->group(function () {
-    Route::get('/', [\App\Http\Controllers\Api\StockMovements\StockMovementController::class, 'index'])
-        ->middleware('role:admin,manager,warehouse');
-});
+    // Sales (POS + history)
+    Route::prefix('sales')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\Sales\SaleController::class, 'index'])->middleware('permission:view reports');
+        Route::post('/', [\App\Http\Controllers\Api\Sales\SaleController::class, 'store'])->middleware('permission:create invoices');
+        Route::get('{sale}', [\App\Http\Controllers\Api\Sales\SaleController::class, 'show'])->middleware('permission:view reports');
+        Route::post('{sale}/void', [\App\Http\Controllers\Api\Sales\SaleController::class, 'void'])->middleware('permission:cancel sales');
+    });
+
+    // Draft Orders (POS hold / recall)
+    Route::prefix('draft-orders')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\DraftOrderController::class, 'index'])->middleware('permission:access pos');
+        Route::post('/', [\App\Http\Controllers\Api\DraftOrderController::class, 'store'])->middleware('permission:access pos');
+        Route::get('/{draftOrder}', [\App\Http\Controllers\Api\DraftOrderController::class, 'show'])->middleware('permission:access pos');
+        Route::put('/{draftOrder}', [\App\Http\Controllers\Api\DraftOrderController::class, 'update'])->middleware('permission:access pos');
+        Route::delete('/{draftOrder}', [\App\Http\Controllers\Api\DraftOrderController::class, 'destroy'])->middleware('permission:access pos');
+    });
+
+    // Stock movements (audit trail)
+    Route::prefix('stock-movements')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\StockMovements\StockMovementController::class, 'index'])->middleware('permission:view inventory');
+    });
+
+    // Inventory operations
+    Route::get('/purchase-receipts', [InventoryController::class, 'indexPurchaseReceipts']);
+    Route::post('/purchase-receipts', [InventoryController::class, 'storePurchaseReceipt']);
+    Route::get('/refunds', [InventoryController::class, 'indexRefunds']);
+    Route::post('/refunds', [InventoryController::class, 'storeRefund']);
+    Route::get('/stock-transfers', [InventoryController::class, 'indexStockTransfers']);
+    Route::post('/stock-transfers', [InventoryController::class, 'storeStockTransfer']);
+    Route::get('/stock-adjustments', [InventoryController::class, 'indexStockAdjustments']);
+    Route::post('/stock-adjustments', [InventoryController::class, 'storeStockAdjustment']);
+
+    // Purchase Orders
+    Route::get('/purchase-orders', [InventoryController::class, 'indexPurchaseOrders'])->middleware('permission:view inventory');
+    Route::post('/purchase-orders', [InventoryController::class, 'storePurchaseOrder'])->middleware('permission:create invoices');
+    Route::get('/purchase-orders/{purchaseOrder}', [InventoryController::class, 'showPurchaseOrder'])->middleware('permission:view inventory');
+    Route::put('/purchase-orders/{purchaseOrder}', [InventoryController::class, 'updatePurchaseOrder'])->middleware('permission:edit invoices');
+    Route::delete('/purchase-orders/{purchaseOrder}', [InventoryController::class, 'destroyPurchaseOrder'])->middleware('permission:cancel sales');
+    Route::post('/purchase-orders/{purchaseOrder}/submit-for-approval', [InventoryController::class, 'submitForApproval'])->middleware('permission:create invoices');
+    Route::post('/purchase-orders/{purchaseOrder}/convert-to-receipt', [InventoryController::class, 'convertToReceipt'])->middleware('permission:create invoices');
+
+    // Supplier Payments
+    Route::get('/supplier-payments', [InventoryController::class, 'indexSupplierPayments'])->middleware('permission:view inventory');
+    Route::post('/supplier-payments', [InventoryController::class, 'storeSupplierPayment'])->middleware('permission:create invoices');
+    Route::get('/supplier-payments/{supplierPayment}', [InventoryController::class, 'showSupplierPayment'])->middleware('permission:view inventory');
+    Route::put('/supplier-payments/{supplierPayment}', [InventoryController::class, 'updateSupplierPayment'])->middleware('permission:edit invoices');
+    Route::delete('/supplier-payments/{supplierPayment}', [InventoryController::class, 'destroySupplierPayment'])->middleware('permission:cancel sales');
+
+}); // End of authenticated routes group

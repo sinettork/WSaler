@@ -87,19 +87,39 @@ class WarehouseController extends Controller
 
     public function destroy(Request $request, Warehouse $warehouse)
     {
-        if ($warehouse->batches()->exists()) {
-            return response()->json([
-                'message' => 'Cannot delete warehouse with associated batches.',
-            ], 422);
-        }
-
         if ($warehouse->is_default) {
             return response()->json([
                 'message' => 'Cannot delete the default warehouse.',
             ], 422);
         }
 
-        $warehouse->delete();
+        if ($warehouse->batches()->exists()) {
+            return response()->json([
+                'message' => 'Cannot delete warehouse with associated batches.',
+                'batches_count' => $warehouse->batches()->count(),
+            ], 422);
+        }
+
+        // F5: stock_movements reference warehouses via restrictOnDelete FK.
+        // Pre-check surfaces a clean 422 instead of an opaque 500.
+        $movementsCount = \App\Models\StockMovement::where('warehouse_id', $warehouse->id)->count();
+        if ($movementsCount > 0) {
+            return response()->json([
+                'message' => 'Cannot delete warehouse referenced by stock_movements.',
+                'stock_movements_count' => $movementsCount,
+            ], 422);
+        }
+
+        try {
+            $warehouse->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($e->getCode() === '23000') {
+                return response()->json([
+                    'message' => 'Cannot delete warehouse: rows in another table still reference it.',
+                ], 422);
+            }
+            throw $e;
+        }
 
         return response()->noContent();
     }

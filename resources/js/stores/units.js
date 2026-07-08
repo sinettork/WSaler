@@ -10,7 +10,13 @@ export const useUnitsStore = defineStore('units', {
     error: null,
   }),
   getters: {
-    baseUnits: (state) => state.items.filter((u) => u.base),
+    baseUnits: (state) => {
+      const bases = state.items.filter((u) => u.base === true);
+      if (state.items.length > 0 && bases.length === 0 && typeof console !== 'undefined') {
+        console.warn('[units] No base units found in', state.items.length, 'loaded units. Mark at least one unit as base.');
+      }
+      return bases;
+    },
     byCode: (state) => (code) => state.items.find((u) => u.short_code === code),
   },
   actions: {

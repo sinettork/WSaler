@@ -10,6 +10,7 @@ use App\Models\ActivityLog;
 use App\Models\Category;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class CategoryController extends Controller
@@ -79,16 +80,69 @@ class CategoryController extends Controller
 
     public function destroy(Request $request, Category $category): Response
     {
+        // F5: block deletion when products reference the category.
+        $productsCount = \App\Models\Product::where('category_id', $category->id)->count();
+        if ($productsCount > 0) {
+            return response()->json([
+                'message' => 'Cannot delete category with associated products. Reassign products first.',
+                'products_count' => $productsCount,
+            ], 422);
+        }
+
         $category->delete();
 
         ActivityLog::create([
             'user_id' => $request->user()->id,
             'action' => 'deleted_category',
             'description' => "Deleted category {$category->name}",
+            'module' => 'master_data',
+            'resource_type' => Category::class,
+            'resource_id' => $category->id,
+            'event' => 'deleted',
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);
 
         return response()->noContent();
+    }
+
+    /**
+     * Return category tree with product counts for POS navigation.
+     * Flat list structure (parent_id references) for easy rendering.
+     */
+    public function tree(Request $request): JsonResponse
+    {
+        // Cache the category tree because it powers POS navigation and product
+        // forms on every page load. Invalidated when categories or active
+        // products change (see the CategoryObserver and ProductObserver).
+        $categories = \Illuminate\Support\Facades\Cache::remember(
+            'categories:tree',
+            now()->addMinutes(15),
+            function () {
+                $productCounts = DB::table('products')
+                    ->select('category_id', DB::raw('COUNT(*) as count'))
+                    ->where('status', 'active')
+                    ->groupBy('category_id');
+
+                return Category::withCount(['children'])
+                    ->leftJoinSub($productCounts, 'p_counts', function ($join) {
+                        $join->on('categories.id', '=', 'p_counts.category_id');
+                    })
+                    ->select([
+                        'categories.id',
+                        'categories.name',
+                        'categories.slug',
+                        'categories.parent_id',
+                        'categories.is_active',
+                        DB::raw('COALESCE(p_counts.count, 0) as products_count'),
+                    ])
+                    ->where('categories.is_active', true)
+                    ->orderBy('categories.parent_id', 'asc')
+                    ->orderBy('categories.name', 'asc')
+                    ->get();
+            }
+        );
+
+        return response()->json(['data' => $categories]);
     }
 }

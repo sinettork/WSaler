@@ -40,7 +40,10 @@ class TargetAchievementUpdaterTest extends TestCase
 
         $sale = $this->makeSale($salesperson, $customer, ['total' => 1500]);
 
-        app(TargetAchievementUpdater::class)->applySale($sale);
+        // Disable observers to test service in isolation
+        \App\Models\Sale::withoutEvents(function () use ($sale) {
+            app(TargetAchievementUpdater::class)->applySale($sale);
+        });
 
         $achievement = $line->achievements()->first();
         $this->assertNotNull($achievement);
@@ -70,8 +73,11 @@ class TargetAchievementUpdaterTest extends TestCase
         ]);
 
         $sale = $this->makeSale($salesperson, $customer, ['total' => 1500]);
-        app(TargetAchievementUpdater::class)->applySale($sale);
-        app(TargetAchievementUpdater::class)->reverseSale($sale);
+
+        \App\Models\Sale::withoutEvents(function () use ($sale) {
+            app(TargetAchievementUpdater::class)->applySale($sale);
+            app(TargetAchievementUpdater::class)->reverseSale($sale);
+        });
 
         $achievement = $line->achievements()->first();
         $this->assertEquals(0, (float) $achievement->achieved_value);
@@ -80,19 +86,21 @@ class TargetAchievementUpdaterTest extends TestCase
     private function makeSale(User $salesperson, Customer $customer, array $attrs = []): \App\Models\Sale
     {
         $warehouse = \App\Models\Warehouse::factory()->create();
-        return \App\Models\Sale::create(array_merge([
-            'invoice_number' => 'INV-' . uniqid(),
-            'customer_id' => $customer->id,
-            'warehouse_id' => $warehouse->id,
-            'user_id' => $salesperson->id,
-            'subtotal' => 1000,
-            'discount' => 0,
-            'tax' => 0,
-            'total' => 1000,
-            'paid' => 1000,
-            'change_due' => 0,
-            'status' => 'completed',
-            'sold_at' => now(),
-        ], $attrs));
+        return \App\Models\Sale::withoutEvents(function () use ($salesperson, $customer, $warehouse, $attrs) {
+            return \App\Models\Sale::create(array_merge([
+                'invoice_number' => 'INV-' . uniqid(),
+                'customer_id' => $customer->id,
+                'warehouse_id' => $warehouse->id,
+                'user_id' => $salesperson->id,
+                'subtotal' => 1000,
+                'discount' => 0,
+                'tax' => 0,
+                'total' => 1000,
+                'paid' => 1000,
+                'change_due' => 0,
+                'status' => 'completed',
+                'sold_at' => now(),
+            ], $attrs));
+        });
     }
 }

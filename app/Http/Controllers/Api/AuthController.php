@@ -76,6 +76,10 @@ class AuthController extends Controller
             'role' => UserRole::Cashier,
         ]);
 
+        // Link the user to the Cashier Role so they actually receive permissions.
+        // Without this the new account has zero permissions on every endpoint.
+        $user->assignRole(UserRole::Cashier->value);
+
         $token = $user->createToken('spa');
 
         ActivityLog::create([

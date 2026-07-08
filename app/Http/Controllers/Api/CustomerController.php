@@ -86,12 +86,25 @@ class CustomerController extends Controller
 
     public function destroy(Request $request, Customer $customer): Response
     {
+        // F13: block deletion when sales reference the customer (audit trail integrity).
+        $salesCount = \App\Models\Sale::where('customer_id', $customer->id)->count();
+        if ($salesCount > 0) {
+            return response()->json([
+                'message' => 'Cannot delete customer with sales history.',
+                'sales_count' => $salesCount,
+            ], 422);
+        }
+
         $customer->delete();
 
         ActivityLog::create([
             'user_id' => $request->user()->id,
             'action' => 'deleted_customer',
             'description' => "Deleted customer {$customer->name}",
+            'module' => 'customers',
+            'resource_type' => Customer::class,
+            'resource_id' => $customer->id,
+            'event' => 'deleted',
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);

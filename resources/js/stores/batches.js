@@ -17,11 +17,11 @@ export const useBatchesStore = defineStore('batches', {
     active: (state) => state.items.filter((b) => b.status === 'active'),
   },
   actions: {
-    async fetch(params = {}) {
+    async fetch(params = {}, options = {}) {
       this.loading = true;
       this.error = null;
       try {
-        const res = await api.get('/batches', { params });
+        const res = await api.get('/batches', { params, silent: options.silent === true });
         this.items = res.data.data || [];
         this.pagination = {
           current_page: res.data.meta?.current_page || 1,
@@ -89,11 +89,11 @@ export const useBatchesStore = defineStore('batches', {
         this.loading = false;
       }
     },
-    async fetchExpiring(days = 30) {
+    async fetchExpiring(days = 30, options = {}) {
       this.loading = true;
       this.error = null;
       try {
-        const res = await api.get('/batches/expiring', { params: { days } });
+        const res = await api.get('/batches/expiring', { params: { days }, silent: options.silent === true });
         this.expiring = res.data.data || [];
       } catch (e) {
         this.error = e;
@@ -101,11 +101,11 @@ export const useBatchesStore = defineStore('batches', {
         this.loading = false;
       }
     },
-    async fetchExpired() {
+    async fetchExpired(options = {}) {
       this.loading = true;
       this.error = null;
       try {
-        const res = await api.get('/batches/expired');
+        const res = await api.get('/batches/expired', { silent: options.silent === true });
         this.expired = res.data.data || [];
       } catch (e) {
         this.error = e;

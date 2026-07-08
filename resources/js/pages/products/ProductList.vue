@@ -56,10 +56,10 @@
         <BaseBadge :variant="value === 'active' ? 'success' : 'neutral'">{{ value }}</BaseBadge>
       </template>
       <template #cell-retail_price="{ value }">
-        {{ formatCurrency(value) }}
+        {{ formatMoney(value) }}
       </template>
       <template #cell-wholesale_price="{ value }">
-        {{ formatCurrency(value) }}
+        {{ formatMoney(value) }}
       </template>
       <template #cell-actions="{ row }">
         <div class="flex items-center gap-2">
@@ -83,8 +83,10 @@ import DataTable from '@/components/DataTable.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import BaseBadge from '@/components/ui/BaseBadge.vue';
 import BaseCard from '@/components/ui/BaseCard.vue';
+import { useCurrency } from '@/composables/useCurrency';
 
 const auth = useAuthStore();
+const { formatMoney } = useCurrency();
 const store = useProductsStore();
 const categoryStore = useCategoriesStore();
 const brandStore = useBrandsStore();
@@ -105,10 +107,7 @@ const columns = [
 
 const filters = reactive({ search: '', category_id: '', brand_id: '', status: '' });
 
-function formatCurrency(value) {
-  if (value == null) return '-';
-  return '$' + Number(value).toFixed(2);
-}
+
 
 function confirmDelete(row) {
   if (!confirm(`Delete product "${row.name}"?`)) return;

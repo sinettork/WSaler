@@ -30,4 +30,21 @@ export default defineConfig({
             ignored: ['**/storage/framework/views/**'],
         },
     },
+    build: {
+        // Split vendor + framework code into its own chunk so the browser
+        // caches it separately from app code. App pages can change without
+        // invalidating Vue/Pinia/Router/i18n, which are stable.
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    if (id.includes('node_modules')) {
+                        if (id.includes('vue') || id.includes('pinia')) return 'vendor-vue';
+                        if (id.includes('i18next')) return 'vendor-i18n';
+                        if (id.includes('axios')) return 'vendor-axios';
+                        return 'vendor';
+                    }
+                },
+            },
+        },
+    },
 });

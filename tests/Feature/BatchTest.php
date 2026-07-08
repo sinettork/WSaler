@@ -5,9 +5,7 @@ namespace Tests\Feature;
 use App\Enums\UserRole;
 use App\Models\Batch;
 use App\Models\Product;
-use App\Models\StockMovement;
 use App\Models\Supplier;
-use App\Models\Unit;
 use App\Models\User;
 use App\Models\Warehouse;
 use Carbon\Carbon;
@@ -18,9 +16,15 @@ class BatchTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seedRolesAndPermissions();
+    }
+
     public function test_warehouse_can_create_batch(): void
     {
-        $user = User::factory()->create(['role' => UserRole::WarehouseStaff]);
+        $user = $this->createUserWithRole(UserRole::WarehouseStaff->value);
         $product = Product::factory()->create();
         $warehouse = Warehouse::create(['name' => 'Main', 'code' => 'WH-001', 'is_default' => true, 'is_active' => true]);
         $supplier = Supplier::factory()->create();
@@ -48,7 +52,7 @@ class BatchTest extends TestCase
 
     public function test_batch_number_auto_generates(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $admin = $this->createUserWithRole(UserRole::Administrator->value);
         $product = Product::factory()->create();
         $warehouse = Warehouse::create(['name' => 'Main', 'code' => 'WH-001', 'is_default' => true, 'is_active' => true]);
 
@@ -68,7 +72,7 @@ class BatchTest extends TestCase
 
     public function test_expiring_endpoint(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $admin = $this->createUserWithRole(UserRole::Administrator->value);
         $product = Product::factory()->create();
         $warehouse = Warehouse::create(['name' => 'Main', 'code' => 'WH-001', 'is_default' => true, 'is_active' => true]);
 
@@ -104,7 +108,7 @@ class BatchTest extends TestCase
 
     public function test_expired_endpoint(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $admin = $this->createUserWithRole(UserRole::Administrator->value);
         $product = Product::factory()->create();
         $warehouse = Warehouse::create(['name' => 'Main', 'code' => 'WH-001', 'is_default' => true, 'is_active' => true]);
 
@@ -128,8 +132,8 @@ class BatchTest extends TestCase
 
     public function test_cannot_delete_batch_with_consumed_stock(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
-        $batch = Batch::factory()->create(['quantity' => 100, 'remaining_quantity' => 50]);
+        $admin = $this->createUserWithRole(UserRole::Administrator->value);
+        $batch = Batch::factory()->create(['quantity' => 100, 'remaining_quantity' => 50, 'purchase_cost' => 5]);
 
         $this->actingAs($admin)
             ->deleteJson("/api/batches/{$batch->id}")
@@ -138,8 +142,8 @@ class BatchTest extends TestCase
 
     public function test_admin_can_delete_unused_batch(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
-        $batch = Batch::factory()->create(['quantity' => 100, 'remaining_quantity' => 100]);
+        $admin = $this->createUserWithRole(UserRole::Administrator->value);
+        $batch = Batch::factory()->create(['quantity' => 100, 'remaining_quantity' => 100, 'purchase_cost' => 5]);
 
         $this->actingAs($admin)
             ->deleteJson("/api/batches/{$batch->id}")
@@ -148,7 +152,7 @@ class BatchTest extends TestCase
 
     public function test_admin_can_list_batches(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $admin = $this->createUserWithRole(UserRole::Administrator->value);
         Batch::factory()->count(3)->create();
 
         $this->actingAs($admin)
@@ -158,7 +162,7 @@ class BatchTest extends TestCase
 
     public function test_cashier_cannot_create_batch(): void
     {
-        $cashier = User::factory()->create(['role' => UserRole::Cashier]);
+        $cashier = $this->createUserWithRole(UserRole::Cashier->value);
         $product = Product::factory()->create();
         $warehouse = Warehouse::create(['name' => 'Main', 'code' => 'WH-001', 'is_default' => true, 'is_active' => true]);
 

@@ -8,6 +8,10 @@ use App\Http\Requests\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\ActivityLog;
 use App\Models\Product;
+use App\Models\ProductVariation;
+use App\Models\Unit;
+use App\Models\Batch;
+use App\Traits\DataScoping;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -15,10 +19,14 @@ use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
+    use DataScoping;
+
     public function index(Request $request)
     {
         $query = Product::with(['brand:id,name', 'category:id,name', 'baseUnit:id,name,short_code'])
             ->withCount(['variations', 'batches']);
+
+        $query = $this->applyDataScoping($query);
 
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
@@ -56,6 +64,17 @@ class ProductController extends Controller
         $product = DB::transaction(function () use ($data, $request) {
             $variations = $data['variations'] ?? [];
             unset($data['variations']);
+
+            // Handle base_unit creation if provided
+            $baseUnitData = $data['base_unit'] ?? null;
+            unset($data['base_unit']);
+
+            if ($baseUnitData) {
+                $baseUnitData['base'] = true;
+                $baseUnitData['conversion_factor_to_base'] = 1;
+                $unit = Unit::create($baseUnitData);
+                $data['base_unit_id'] = $unit->id;
+            }
 
             if ($request->hasFile('image')) {
                 $data['image'] = $request->file('image')->store('products', 'public');
@@ -146,12 +165,43 @@ class ProductController extends Controller
 
     public function destroy(Request $request, Product $product)
     {
-        $product->delete();
+        // F5: block deletion when batches reference the product.
+        $batchesCount = Batch::where('product_id', $product->id)->count();
+        if ($batchesCount > 0) {
+            return response()->json([
+                'message' => 'Cannot delete product with associated batches. Reverse or transfer stock first.',
+                'batches_count' => $batchesCount,
+            ], 422);
+        }
+
+        // F5: block deletion when sale items reference the product (audit trail integrity).
+        $saleItemsCount = \App\Models\SaleItem::where('product_id', $product->id)->count();
+        if ($saleItemsCount > 0) {
+            return response()->json([
+                'message' => 'Cannot delete product referenced by sale history.',
+                'sale_items_count' => $saleItemsCount,
+            ], 422);
+        }
+
+        try {
+            $product->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($e->getCode() === '23000') {
+                return response()->json([
+                    'message' => 'Cannot delete product: rows in another table still reference it.',
+                ], 422);
+            }
+            throw $e;
+        }
 
         ActivityLog::create([
             'user_id' => $request->user()->id,
             'action' => 'deleted_product',
             'description' => "Deleted product: {$product->name}",
+            'module' => 'products',
+            'resource_type' => Product::class,
+            'resource_id' => $product->id,
+            'event' => 'deleted',
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);
@@ -174,6 +224,70 @@ class ProductController extends Controller
             ->get(['id', 'name', 'sku', 'barcode', 'base_unit_id', 'retail_price', 'wholesale_price', 'distributor_price']);
 
         return response()->json(['data' => $products]);
+    }
+
+    /**
+     * POS barcode scan — return exact-match product or variation.
+     * Includes variations and FEFO batch stock per warehouse.
+     */
+    public function lookupBarcode(Request $request)
+    {
+        $code = $request->query('code', '');
+        if (empty($code)) {
+            return response()->json(['data' => null], 400);
+        }
+
+        // Try product direct match
+        $product = Product::with(['baseUnit:id,name,short_code', 'variations:id,product_id,name,value,sku_suffix,barcode,additional_price,quantity_multiplier'])
+            ->where('status', 'active')
+            ->where('barcode', $code)
+            ->first();
+
+        // Try variation match if no product hit
+        if (!$product) {
+            $variation = ProductVariation::with([
+                'product.baseUnit:id,name,short_code',
+                'product:id,name,sku,barcode,base_unit_id,wholesale_price,retail_price,distributor_price,status,track_stock',
+                'product.variations:id,product_id,name,value,sku_suffix,barcode,additional_price,quantity_multiplier',
+            ])->where('barcode', $code)->first();
+
+            if ($variation && $variation->product) {
+                $variation = $variation->toArray();
+                $product = $variation['product'];
+                $product['matched_variation'] = $variation;
+            }
+        }
+
+        if (!$product) {
+            return response()->json(['data' => null], 404);
+        }
+
+        return response()->json(['data' => $product]);
+    }
+
+    /**
+     * Return active batches for a product in a warehouse, sorted FEFO.
+     * Used by POS when selecting batch-specific stock.
+     */
+    public function posBatches(Request $request, Product $product)
+    {
+        $warehouseId = (int) $request->query('warehouse_id', 0);
+
+        $query = $product->batches()
+            ->where('status', 'active')
+            ->where('remaining_quantity', '>', 0)
+            ->orderByRaw('expiry_date IS NULL, expiry_date ASC')
+            ->orderBy('received_date', 'ASC')
+            ->orderBy('id', 'ASC');
+
+        if ($warehouseId > 0) {
+            $query->where('warehouse_id', $warehouseId);
+        }
+
+        $batches = $query->with(['warehouse:id,name,code'])
+            ->get(['id', 'batch_number', 'product_id', 'variation_id', 'warehouse_id', 'remaining_quantity', 'expiry_date', 'manufacture_date', 'received_date', 'purchase_cost']);
+
+        return response()->json(['data' => $batches]);
     }
 
     private function generateSku(): string

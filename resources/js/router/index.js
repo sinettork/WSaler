@@ -10,6 +10,17 @@ const routes = [
         meta: { public: true },
     },
     {
+        // Internal design exploration — previews 3 UI direction variants
+        // (A: Warehouse Operational, B: Modern Distribution, C: Market-Forward).
+        // Not part of the production IA; safe to keep in repo for review.
+        // Intentionally NOT marked `public` (would redirect logged-in users
+        // back to dashboard) and NOT marked `requiresAuth` (would block
+        // logged-out review of the login surface). The auth guards skip it.
+        path: '/design-preview',
+        name: 'design-preview',
+        component: () => import('@/pages/DesignPreview.vue'),
+    },
+    {
         path: '/register',
         name: 'register',
         component: () => import('@/pages/Register.vue'),
@@ -67,6 +78,20 @@ const routes = [
             { path: 'warehouses', name: 'warehouses.index', component: () => import('@/pages/products/WarehouseList.vue'), meta: { role: ['admin', 'manager'] } },
             { path: 'warehouses/new', name: 'warehouses.create', component: () => import('@/pages/products/WarehouseForm.vue'), meta: { role: ['admin', 'manager'] } },
             { path: 'warehouses/:id/edit', name: 'warehouses.edit', component: () => import('@/pages/products/WarehouseForm.vue'), meta: { role: ['admin', 'manager'] } },
+
+            { path: 'inventory/operations', name: 'inventory.operations', component: () => import('@/pages/inventory/InventoryOperations.vue') },
+            { path: 'inventory/receipts', name: 'inventory.receipts.index', component: () => import('@/pages/inventory/PurchaseReceiptsList.vue') },
+            { path: 'inventory/receipts/new', name: 'inventory.receipts.create', component: () => import('@/pages/inventory/PurchaseReceiptForm.vue') },
+            { path: 'inventory/refunds', name: 'inventory.refunds.index', component: () => import('@/pages/inventory/RefundsList.vue') },
+            { path: 'inventory/refunds/new', name: 'inventory.refunds.create', component: () => import('@/pages/inventory/RefundForm.vue') },
+            { path: 'inventory/transfers', name: 'inventory.transfers.index', component: () => import('@/pages/inventory/StockTransfersList.vue') },
+            { path: 'inventory/transfers/new', name: 'inventory.transfers.create', component: () => import('@/pages/inventory/StockTransferForm.vue') },
+            { path: 'inventory/adjustments', name: 'inventory.adjustments.index', component: () => import('@/pages/inventory/StockAdjustmentsList.vue') },
+            { path: 'inventory/adjustments/new', name: 'inventory.adjustments.create', component: () => import('@/pages/inventory/StockAdjustmentForm.vue') },
+
+            // Settings
+            { path: 'settings', name: 'settings.index', component: () => import('@/pages/settings/UserSettings.vue') },
+            { path: 'settings/app', name: 'settings.app', component: () => import('@/pages/settings/AppSettings.vue'), meta: { role: ['admin', 'manager'] } },
         ],
     },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/pages/NotFound.vue') },

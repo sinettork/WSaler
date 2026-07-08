@@ -23,9 +23,13 @@ api.interceptors.response.use(
     (error) => {
         const toast = useToastStore();
 
+        // `silent: true` on the request config suppresses all toasts for this call.
+        // Used by background loads (e.g. Dashboard stats) where a failure shouldn't
+        // shout at the user — the caller handles it gracefully.
+        const silent = error.config?.silent === true;
+
         if (!error.response) {
-            // Network / CORS / aborted
-            if (error.code !== 'ERR_CANCELED') {
+            if (!silent && error.code !== 'ERR_CANCELED') {
                 toast.error('Network error. Please check your connection.');
             }
             return Promise.reject(error);
@@ -36,17 +40,20 @@ api.interceptors.response.use(
         if (status === 401) {
             const auth = useAuthStore();
             auth.logout();
-            toast.error('Session expired. Please log in again.');
+            if (!silent) toast.error('Session expired. Please log in again.');
             return Promise.reject(error);
         }
 
-        // Attach structured field errors for 422 so callers can bind to inputs
         if (status === 422 && data?.errors) {
             error.fieldErrors = {};
             for (const [field, messages] of Object.entries(data.errors)) {
                 error.fieldErrors[field] = Array.isArray(messages) ? messages[0] : String(messages);
             }
-            // Don't toast — caller will show inline errors
+            return Promise.reject(error);
+        }
+
+        if (silent) {
+            // Background call: caller already knows how to handle failure.
             return Promise.reject(error);
         }
 

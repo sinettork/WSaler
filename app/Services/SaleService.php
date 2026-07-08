@@ -69,12 +69,26 @@ class SaleService
                 throw new RuntimeException('Credit payment requires a customer.');
             }
             if ($customer && $creditAmount > 0) {
-                $newBalance = (float) $customer->current_balance + $creditAmount;
+                // Calculate available credit including pending draft orders
+                $currentBalance = (float) $customer->current_balance;
+                
+                // Sum credit amounts from draft orders (pending/on-hold)
+                $pendingCreditTotal = (float) DB::table('draft_orders')
+                    ->join('draft_order_payments', 'draft_orders.id', '=', 'draft_order_payments.draft_order_id')
+                    ->where('draft_orders.customer_id', $customer->id)
+                    ->where('draft_orders.status', 'draft')
+                    ->where('draft_order_payments.method', 'credit')
+                    ->sum('draft_order_payments.amount');
+                
+                $totalUtilizedCredit = $currentBalance + $pendingCreditTotal + $creditAmount;
                 $limit = (float) $customer->credit_limit;
-                if ($limit > 0 && $newBalance > $limit) {
-                    $remaining = max(0, $limit - (float) $customer->current_balance);
+                
+                if ($limit > 0 && $totalUtilizedCredit > $limit) {
+                    $remaining = max(0, $limit - $currentBalance - $pendingCreditTotal);
                     throw new RuntimeException(
-                        "Credit sale exceeds customer's credit limit. Available credit: {$remaining}."
+                        "Credit sale exceeds customer's credit limit. Available credit: " . number_format($remaining, 2) . 
+                        " (Current balance: " . number_format($currentBalance, 2) . 
+                        ", Pending orders: " . number_format($pendingCreditTotal, 2) . ")"
                     );
                 }
             }

@@ -9,6 +9,8 @@ use Carbon\Carbon;
 class FefoBatchSelector
 {
     /**
+     * Select batches using FEFO, accounting for reserved quantities
+     * 
      * @return array<int, array{batch: Batch, quantity: int}>
      */
     public function selectForProduct(int $productId, int $quantity, ?int $variationId = null, ?int $warehouseId = null): array
@@ -16,7 +18,7 @@ class FefoBatchSelector
         $query = Batch::query()
             ->where('product_id', $productId)
             ->where('status', 'active')
-            ->where('remaining_quantity', '>', 0)
+            ->whereRaw('(remaining_quantity - COALESCE(reserved_quantity, 0)) > 0')
             ->where(function ($q) {
                 $q->whereNull('expiry_date')
                   ->orWhere('expiry_date', '>=', today());
@@ -44,7 +46,8 @@ class FefoBatchSelector
         $totalAvailable = 0;
 
         foreach ($batches as $batch) {
-            $available = $batch->remaining_quantity;
+            // Calculate available quantity after accounting for reservations
+            $available = $batch->remaining_quantity - ($batch->reserved_quantity ?? 0);
             $totalAvailable += $available;
 
             if ($remainingNeeded <= 0) {

@@ -1,0 +1,145 @@
+/* Variant C — Market-Forward (warm)
+ * Cream + warm brown sidebar + orange accent. Subtle Southeast Asian
+ * sensibility, distinctive without being kitsch. Functional color kept
+ * for stock/expiry states.
+ */
+
+.vc {
+    /* Cream + warm neutrals */
+    --color-stone-50:  #fdfaf5;  /* page bg — warm cream */
+    --color-stone-100: #f5f0e6;  /* subtle hover */
+    --color-stone-200: #e8e0d1;  /* borders */
+    --color-stone-300: #d4c8b1;
+    --color-stone-400: #a89878;
+    --color-stone-500: #786a52;
+    --color-stone-600: #574c3a;
+    --color-stone-700: #3d3528;
+    --color-stone-800: #26201a;
+    --color-stone-900: #1a1610;
+    --color-stone-950: #0e0b07;
+
+    /* Sidebar — warm dark brown, distinctive */
+    --color-vc-sidebar-bg: #2b1f15;
+    --color-vc-sidebar-fg: #f5ebd9;
+    --color-vc-sidebar-muted: #b8a07a;
+    --color-vc-sidebar-active: #3d2c1f;
+    --color-vc-sidebar-border: #3d2c1f;
+    --color-vc-sidebar-accent: #fb923c;
+
+    /* Brand — warm orange (market-energy, friendly) */
+    --color-brand-50:  #fff7ed;
+    --color-brand-100: #ffedd5;
+    --color-brand-500: #f97316;
+    --color-brand-600: #ea580c;
+    --color-brand-700: #c2410c;
+    --color-brand-800: #9a3412;
+
+    /* Status — slightly muted to harmonize with warm palette */
+    --vc-fresh:     #15803d;
+    --vc-warning:   #ca8a04;
+    --vc-critical:  #b91c1c;
+    --vc-info:      #1d4ed8;
+
+    --vc-fresh-bg:     #f0fdf4;
+    --vc-warning-bg:   #fefce8;
+    --vc-critical-bg:  #fef2f2;
+    --vc-info-bg:      #eff6ff;
+
+    /* Typography */
+    --vc-font-sans: "Google Sans", "Noto Sans Khmer", "Inter", system-ui, sans-serif;
+    --vc-font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+    background: var(--color-stone-50);
+    color: var(--color-stone-800);
+    font-family: var(--vc-font-sans);
+}
+
+.vc { font-size: 14px; line-height: 1.55; }
+.vc h1 {
+    font-size: 1.5rem; font-weight: 700;
+    letter-spacing: -0.02em; color: var(--color-stone-950);
+}
+.vc h2 {
+    font-size: 0.9375rem; font-weight: 600;
+    color: var(--color-stone-900);
+}
+
+.vc .vc-mono {
+    font-family: var(--vc-font-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Status pills — soft, warm-friendly */
+.vc .vc-pill {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.6875rem; font-weight: 600;
+    border-radius: 9999px;
+}
+.vc .vc-pill-fresh    { background: var(--vc-fresh-bg);    color: #166534; }
+.vc .vc-pill-warning  { background: var(--vc-warning-bg);  color: #854d0e; }
+.vc .vc-pill-critical { background: var(--vc-critical-bg); color: #991b1b; }
+.vc .vc-pill-info     { background: var(--vc-info-bg);     color: #1e40af; }
+
+.vc .vc-dot { display:inline-block; width:0.45rem; height:0.45rem; border-radius:9999px; }
+.vc .vc-dot-fresh    { background: var(--vc-fresh); }
+.vc .vc-dot-warning  { background: var(--vc-warning); }
+.vc .vc-dot-critical { background: var(--vc-critical); }
+.vc .vc-dot-info     { background: var(--vc-info); }
+
+/* Card — softer corners, warmer shadow */
+.vc .vc-card {
+    background: white;
+    border: 1px solid var(--color-stone-200);
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px rgba(43, 31, 21, 0.04);
+    overflow: hidden;
+}
+
+/* Sidebar nav item */
+.vc .vc-nav-item {
+    display: flex; align-items: center; gap: 0.625rem;
+    padding: 0.4375rem 0.75rem;
+    color: var(--color-vc-sidebar-fg);
+    font-size: 0.8125rem; font-weight: 500;
+    border-radius: 0.5rem;
+    cursor: pointer;
+}
+.vc .vc-nav-item:hover { background: var(--color-vc-sidebar-active); }
+.vc .vc-nav-item-active {
+    background: linear-gradient(90deg, var(--color-vc-sidebar-active), transparent);
+    color: white;
+    box-shadow: inset 2px 0 0 var(--color-vc-sidebar-accent);
+}
+
+/* Primary button */
+.vc .vc-btn-primary {
+    background: var(--color-brand-600);
+    color: white;
+    font-weight: 600; font-size: 0.8125rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: 0.5rem;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    box-shadow: 0 1px 2px rgba(234, 88, 12, 0.25);
+    transition: background-color 120ms;
+}
+.vc .vc-btn-primary:hover { background: var(--color-brand-700); }
+
+/* Table */
+.vc .vc-row {
+    display: grid; align-items: center;
+    height: 3.25rem;
+    padding: 0 1rem;
+    border-bottom: 1px solid var(--color-stone-100);
+    font-size: 0.8125rem;
+}
+.vc .vc-row:hover { background: var(--color-stone-50); }
+.vc .vc-row-header {
+    background: var(--color-stone-50);
+    color: var(--color-stone-500);
+    font-weight: 600; font-size: 0.6875rem;
+    text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+/* Khmer script support — slightly larger & clearer */
+.vc :lang(km) { font-size: 1.05em; }

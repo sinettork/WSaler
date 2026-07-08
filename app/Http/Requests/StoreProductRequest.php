@@ -21,7 +21,10 @@ class StoreProductRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'brand_id' => ['nullable', 'integer', 'exists:brands,id'],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
-            'base_unit_id' => ['required', 'integer', 'exists:units,id'],
+            'base_unit_id' => ['nullable', 'integer', 'exists:units,id'],
+            'base_unit' => ['nullable', 'array'],
+            'base_unit.name' => ['required_with:base_unit', 'string', 'max:100'],
+            'base_unit.short_code' => ['required_with:base_unit', 'string', 'max:20'],
             'retail_price' => ['required', 'numeric', 'min:0'],
             'wholesale_price' => ['required', 'numeric', 'min:0'],
             'distributor_price' => ['required', 'numeric', 'min:0'],
@@ -37,5 +40,14 @@ class StoreProductRequest extends FormRequest
             'variations.*.additional_price' => ['nullable', 'numeric', 'min:0'],
             'variations.*.is_active' => ['boolean'],
         ];
+    }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            if (empty($this->base_unit_id) && empty($this->base_unit)) {
+                $validator->errors()->add('base_unit_id', 'Either base_unit_id or base_unit data is required.');
+            }
+        });
     }
 }

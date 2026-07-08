@@ -21,11 +21,13 @@ class ProductTest extends TestCase
     {
         parent::setUp();
         Storage::fake('public');
+        $this->artisan('db:seed', ['--class' => \Database\Seeders\RolePermissionSeeder::class]);
     }
 
     public function test_admin_can_list_products(): void
     {
         $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $admin->assignRole('administrator');
         Product::factory()->count(3)->create();
 
         $this->actingAs($admin)
@@ -37,6 +39,7 @@ class ProductTest extends TestCase
     public function test_cashier_can_list_products(): void
     {
         $cashier = User::factory()->create(['role' => UserRole::Cashier]);
+        $cashier->assignRole('cashier');
         Product::factory()->count(3)->create();
 
         $this->actingAs($cashier)
@@ -47,6 +50,7 @@ class ProductTest extends TestCase
     public function test_admin_can_create_product(): void
     {
         $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $admin->assignRole('administrator');
         $category = Category::factory()->create();
         $brand = Brand::factory()->create();
         $unit = Unit::create(['name' => 'Piece', 'short_code' => 'pcs', 'base' => true, 'conversion_factor_to_base' => 1]);
@@ -73,6 +77,7 @@ class ProductTest extends TestCase
     public function test_admin_can_create_product_with_image(): void
     {
         $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $admin->assignRole('administrator');
         $unit = Unit::create(['name' => 'Piece', 'short_code' => 'pcs', 'base' => true, 'conversion_factor_to_base' => 1]);
 
         $payload = [
@@ -96,6 +101,7 @@ class ProductTest extends TestCase
     public function test_cashier_cannot_create_product(): void
     {
         $cashier = User::factory()->create(['role' => UserRole::Cashier]);
+        $cashier->assignRole('cashier');
         $unit = Unit::create(['name' => 'Piece', 'short_code' => 'pcs', 'base' => true, 'conversion_factor_to_base' => 1]);
 
         $this->actingAs($cashier)
@@ -113,6 +119,7 @@ class ProductTest extends TestCase
     public function test_sku_auto_generated_when_blank(): void
     {
         $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $admin->assignRole('administrator');
         $unit = Unit::create(['name' => 'Piece', 'short_code' => 'pcs', 'base' => true, 'conversion_factor_to_base' => 1]);
 
         $this->actingAs($admin)
@@ -131,6 +138,7 @@ class ProductTest extends TestCase
     public function test_admin_can_update_product_with_variations(): void
     {
         $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $admin->assignRole('administrator');
         $unit = Unit::create(['name' => 'Piece', 'short_code' => 'pcs', 'base' => true, 'conversion_factor_to_base' => 1]);
         $product = Product::factory()->create(['base_unit_id' => $unit->id]);
         $existing = $product->variations()->create(['name' => 'Size', 'value' => 'Small']);
@@ -159,6 +167,7 @@ class ProductTest extends TestCase
     public function test_admin_can_delete_product(): void
     {
         $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $admin->assignRole('administrator');
         $product = Product::factory()->create();
 
         $this->actingAs($admin)
@@ -171,6 +180,7 @@ class ProductTest extends TestCase
     public function test_lookup_endpoint_works(): void
     {
         $cashier = User::factory()->create(['role' => UserRole::Cashier]);
+        $cashier->assignRole('cashier');
         Product::factory()->create(['name' => 'Coca Cola']);
         Product::factory()->create(['name' => 'Pepsi', 'status' => 'inactive']);
 

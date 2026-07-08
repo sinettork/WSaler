@@ -18,7 +18,7 @@ class UpdateCategoryRequest extends FormRequest
 
         return [
             'name' => ['sometimes', 'required', 'string', 'max:100'],
-            'slug' => ['sometimes', 'required', 'string', 'max:120', Rule::unique('categories', 'slug')->ignore($categoryId)],
+            'slug' => ['sometimes', 'nullable', 'string', 'max:120', Rule::unique('categories', 'slug')->ignore($categoryId)],
             'description' => ['sometimes', 'nullable', 'string'],
             'parent_id' => ['sometimes', 'nullable', 'integer', 'exists:categories,id'],
             'is_active' => ['sometimes', 'boolean'],

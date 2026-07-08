@@ -93,19 +93,19 @@
                         <dl class="space-y-3 text-sm">
                             <div class="flex justify-between gap-4">
                                 <dt class="text-slate-500">Retail</dt>
-                                <dd class="font-medium text-slate-900">{{ formatCurrency(product.retail_price) }}</dd>
+                                <dd class="font-medium text-slate-900">{{ formatMoney(product.retail_price) }}</dd>
                             </div>
                             <div class="flex justify-between gap-4">
                                 <dt class="text-slate-500">Wholesale</dt>
-                                <dd class="font-medium text-slate-900">{{ formatCurrency(product.wholesale_price) }}</dd>
+                                <dd class="font-medium text-slate-900">{{ formatMoney(product.wholesale_price) }}</dd>
                             </div>
                             <div class="flex justify-between gap-4">
                                 <dt class="text-slate-500">Distributor</dt>
-                                <dd class="font-medium text-slate-900">{{ formatCurrency(product.distributor_price) }}</dd>
+                                <dd class="font-medium text-slate-900">{{ formatMoney(product.distributor_price) }}</dd>
                             </div>
                             <div class="flex justify-between gap-4 pt-2 border-t border-slate-100">
                                 <dt class="text-slate-500">Cost</dt>
-                                <dd class="font-medium text-slate-900">{{ formatCurrency(product.cost_price) }}</dd>
+                                <dd class="font-medium text-slate-900">{{ formatMoney(product.cost_price) }}</dd>
                             </div>
                         </dl>
                     </BaseCard>
@@ -144,7 +144,7 @@
                         <li v-for="v in product.variations" :key="v.id" class="px-5 py-3 text-sm">
                             <div class="flex items-baseline justify-between gap-2">
                                 <span class="font-medium text-slate-900">{{ v.name }}: {{ v.value }}</span>
-                                <span v-if="v.additional_price" class="text-xs text-slate-500">+{{ formatCurrency(v.additional_price) }}</span>
+                                <span v-if="v.additional_price" class="text-xs text-slate-500">+{{ formatMoney(v.additional_price) }}</span>
                             </div>
                             <div class="mt-1 text-xs text-slate-500 flex flex-wrap gap-x-3 gap-y-0.5">
                                 <span>SKU suffix: <span class="text-slate-700">{{ v.sku_suffix || '—' }}</span></span>
@@ -197,18 +197,15 @@ import BaseCard from '@/components/ui/BaseCard.vue';
 import BaseBadge from '@/components/ui/BaseBadge.vue';
 import EmptyState from '@/components/ui/EmptyState.vue';
 import Spinner from '@/components/ui/Spinner.vue';
+import { useCurrency } from '@/composables/useCurrency';
 
 const route = useRoute();
 const auth = useAuthStore();
 const store = useProductsStore();
+const { formatMoney } = useCurrency();
 
 const product = computed(() => store.current);
 const loading = computed(() => store.loading && !store.current);
-
-function formatCurrency(value) {
-    if (value == null) return '-';
-    return '$' + Number(value).toFixed(2);
-}
 
 function expiryVariant(status) {
     switch (status) {

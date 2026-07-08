@@ -15,7 +15,17 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureRole::class,
+            'permission' => \App\Http\Middleware\EnsurePermission::class,
         ]);
+
+        // Apply pagination defaults to all API routes
+        $middleware->appendToGroup('api', [
+            \App\Http\Middleware\PaginationDefaults::class,
+            \App\Http\Middleware\ApiErrorHandler::class,
+        ]);
+
+        // Configure rate limiting for API routes (60 requests per minute)
+        $middleware->throttleApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

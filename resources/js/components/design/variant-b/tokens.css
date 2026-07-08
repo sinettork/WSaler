@@ -1,0 +1,142 @@
+/* Variant B — Modern Distribution
+ * Charcoal base, one bold accent, sharp typography, restrained borders.
+ * Linear/Notion-clarity with warehouse-domain cues baked in.
+ */
+
+.vb {
+    /* Surfaces — clean off-white + white */
+    --color-zinc-50:  #fafafa;
+    --color-zinc-100: #f4f4f5;
+    --color-zinc-200: #e4e4e7;
+    --color-zinc-300: #d4d4d8;
+    --color-zinc-400: #a1a1aa;
+    --color-zinc-500: #71717a;
+    --color-zinc-600: #52525b;
+    --color-zinc-700: #3f3f46;
+    --color-zinc-800: #27272a;
+    --color-zinc-900: #18181b;
+    --color-zinc-950: #09090b;
+
+    /* Sidebar — true black, sharp */
+    --color-vb-sidebar-bg: #09090b;
+    --color-vb-sidebar-fg: #d4d4d8;
+    --color-vb-sidebar-muted: #71717a;
+    --color-vb-sidebar-active: #18181b;
+    --color-vb-sidebar-border: #27272a;
+    --color-vb-sidebar-accent: #38bdf8;
+
+    /* Brand — sharp electric blue */
+    --color-brand-50:  #f0f9ff;
+    --color-brand-100: #e0f2fe;
+    --color-brand-500: #0ea5e9;
+    --color-brand-600: #0284c7;
+    --color-brand-700: #0369a1;
+    --color-brand-800: #075985;
+
+    /* Status — bright, dashboard-feel */
+    --vb-fresh:     #10b981;
+    --vb-warning:   #f59e0b;
+    --vb-critical:  #ef4444;
+    --vb-info:      #6366f1;
+
+    --vb-fresh-bg:     #ecfdf5;
+    --vb-warning-bg:   #fffbeb;
+    --vb-critical-bg:  #fef2f2;
+    --vb-info-bg:      #eef2ff;
+
+    /* Typography */
+    --vb-font-sans: "Google Sans", "Inter", "Noto Sans Khmer", system-ui, sans-serif;
+    --vb-font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+    background: var(--color-zinc-50);
+    color: var(--color-zinc-800);
+    font-family: var(--vb-font-sans);
+}
+
+/* Sharp typography hierarchy */
+.vb { font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+.vb h1 {
+    font-size: 1.5rem; font-weight: 700;
+    letter-spacing: -0.025em; color: var(--color-zinc-950);
+}
+.vb h2 {
+    font-size: 0.875rem; font-weight: 600;
+    letter-spacing: -0.005em; color: var(--color-zinc-900);
+}
+
+.vb .vb-mono {
+    font-family: var(--vb-font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
+
+/* Status pills — rounded, modern */
+.vb .vb-pill {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.6875rem; font-weight: 600;
+    border-radius: 9999px;
+}
+.vb .vb-pill-fresh    { background: var(--vb-fresh-bg);    color: #047857; }
+.vb .vb-pill-warning  { background: var(--vb-warning-bg);  color: #b45309; }
+.vb .vb-pill-critical { background: var(--vb-critical-bg); color: #b91c1c; }
+.vb .vb-pill-info     { background: var(--vb-info-bg);     color: #4f46e5; }
+
+.vb .vb-dot { display:inline-block; width:0.4rem; height:0.4rem; border-radius:9999px; }
+.vb .vb-dot-fresh    { background: var(--vb-fresh); }
+.vb .vb-dot-warning  { background: var(--vb-warning); }
+.vb .vb-dot-critical { background: var(--vb-critical); }
+.vb .vb-dot-info     { background: var(--vb-info); }
+
+/* Sharp card */
+.vb .vb-card {
+    background: white;
+    border: 1px solid var(--color-zinc-200);
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+/* Sidebar nav item */
+.vb .vb-nav-item {
+    display: flex; align-items: center; gap: 0.625rem;
+    padding: 0.4rem 0.625rem;
+    color: var(--color-vb-sidebar-fg);
+    font-size: 0.8125rem; font-weight: 500;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: background-color 120ms;
+}
+.vb .vb-nav-item:hover { background: var(--color-vb-sidebar-active); }
+.vb .vb-nav-item-active {
+    background: white;
+    color: var(--color-zinc-950);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* Table */
+.vb .vb-row {
+    display: grid; align-items: center;
+    height: 3rem;
+    padding: 0 1rem;
+    border-bottom: 1px solid var(--color-zinc-100);
+    font-size: 0.8125rem;
+}
+.vb .vb-row:hover { background: var(--color-zinc-50); }
+.vb .vb-row-header {
+    background: var(--color-zinc-50);
+    color: var(--color-zinc-500);
+    font-weight: 600; font-size: 0.6875rem;
+    text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+/* Primary button */
+.vb .vb-btn-primary {
+    background: var(--color-zinc-950);
+    color: white;
+    font-weight: 600; font-size: 0.8125rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: 0.375rem;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    transition: background-color 120ms;
+}
+.vb .vb-btn-primary:hover { background: var(--color-zinc-800); }

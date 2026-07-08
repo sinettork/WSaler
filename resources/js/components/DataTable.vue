@@ -1,6 +1,6 @@
 <template>
-  <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-    <div v-if="searchable" class="px-5 py-4 border-b border-slate-200">
+  <div class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+    <div v-if="searchable" class="px-4 py-3 border-b border-slate-200">
       <div class="relative max-w-sm">
         <svg
           class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"
@@ -16,7 +16,7 @@
           v-model="searchQuery"
           type="search"
           placeholder="Search..."
-          class="block w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 py-2 text-sm shadow-sm placeholder-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
+          class="block w-full rounded-md border border-slate-300 bg-white pl-9 pr-3 py-1.5 text-[13px] shadow-sm placeholder-slate-400 font-mono focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500/30"
           @input="onSearchInput"
         />
       </div>
@@ -73,7 +73,7 @@
               <td
                 v-for="col in columns"
                 :key="col.key"
-                :class="['px-5 py-3 text-sm text-slate-700 whitespace-nowrap', col.class]"
+                :class="['px-4 py-2.5 text-[13px] text-slate-700 whitespace-nowrap', col.class]"
               >
                 <slot :name="`cell-${col.key}`" :value="row[col.key]" :row="row">
                   {{ formatCell(row[col.key], col.format) }}

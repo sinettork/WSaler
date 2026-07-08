@@ -12,12 +12,35 @@ class UnitTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->artisan('db:seed', ['--class' => \Database\Seeders\RolePermissionSeeder::class]);
+    }
+
+    protected function actingAsRole(string $role): string
+    {
+        $user = User::factory()->create(['role' => $role]);
+        $spatieRole = match ($role) {
+            'admin' => 'administrator',
+            'manager' => 'manager',
+            'cashier' => 'cashier',
+            'warehouse' => 'warehouse_staff',
+            'purchasing' => 'purchasing_staff',
+            'delivery' => 'delivery_staff',
+            'salesperson' => 'sales_staff',
+            default => 'cashier',
+        };
+        $user->assignRole($spatieRole);
+        return $user->createToken('test')->plainTextToken;
+    }
+
     public function test_admin_can_list_units(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $token = $this->actingAsRole(UserRole::Administrator->value);
         Unit::create(['name' => 'Piece', 'short_code' => 'pcs', 'base' => true, 'conversion_factor_to_base' => 1]);
 
-        $this->actingAs($admin)
+        $this->withHeader('Authorization', 'Bearer '.$token)
             ->getJson('/api/units')
             ->assertOk()
             ->assertJsonCount(1, 'data');
@@ -25,9 +48,9 @@ class UnitTest extends TestCase
 
     public function test_admin_can_create_base_unit(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $token = $this->actingAsRole(UserRole::Administrator->value);
 
-        $this->actingAs($admin)
+        $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson('/api/units', [
                 'name' => 'Kilogram',
                 'short_code' => 'kg',
@@ -40,9 +63,9 @@ class UnitTest extends TestCase
 
     public function test_admin_can_create_derived_unit(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $token = $this->actingAsRole(UserRole::Administrator->value);
 
-        $this->actingAs($admin)
+        $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson('/api/units', [
                 'name' => 'Carton',
                 'short_code' => 'ctn',
@@ -55,10 +78,10 @@ class UnitTest extends TestCase
 
     public function test_short_code_must_be_unique(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $token = $this->actingAsRole(UserRole::Administrator->value);
         Unit::create(['name' => 'Piece', 'short_code' => 'pcs', 'base' => true, 'conversion_factor_to_base' => 1]);
 
-        $this->actingAs($admin)
+        $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson('/api/units', [
                 'name' => 'Another Piece',
                 'short_code' => 'pcs',
@@ -70,9 +93,9 @@ class UnitTest extends TestCase
 
     public function test_cashier_cannot_create_unit(): void
     {
-        $cashier = User::factory()->create(['role' => UserRole::Cashier]);
+        $token = $this->actingAsRole(UserRole::Cashier->value);
 
-        $this->actingAs($cashier)
+        $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson('/api/units', [
                 'name' => 'Test',
                 'short_code' => 'tst',

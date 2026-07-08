@@ -56,6 +56,7 @@
 
 <script setup>
 import { ref, watch, nextTick } from 'vue';
+import BaseButton from '@/components/ui/BaseButton.vue';
 
 const props = defineProps({
     label: { type: String, default: '' },

@@ -37,11 +37,11 @@ const hasFooter = computed(() => !!slots.footer);
 
 <template>
     <div
-        :class="['bg-white border border-slate-200 rounded-xl overflow-hidden', shadowClass]"
+        :class="['bg-white border border-slate-200 rounded-lg overflow-hidden', shadowClass]"
     >
         <div
             v-if="hasHeader"
-            class="px-5 py-4 border-b border-slate-200 flex items-center justify-between"
+            class="px-4 py-3 border-b border-slate-200 flex items-center justify-between"
         >
             <slot name="header" />
         </div>
@@ -52,7 +52,7 @@ const hasFooter = computed(() => !!slots.footer);
 
         <div
             v-if="hasFooter"
-            class="px-5 py-4 border-t border-slate-200 bg-slate-50"
+            class="px-4 py-3 border-t border-slate-200 bg-slate-50"
         >
             <slot name="footer" />
         </div>

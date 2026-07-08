@@ -18,6 +18,8 @@ import { reactive, computed, ref } from 'vue';
  *     quantity_multiplier: number,      // base units per sold unit (1 for non-variations)
  *     unit_id: number,
  *     unit_name: string,
+ *     batch_id: number | null,
+ *     batch_number: string | null,
  *     quantity: number,
  *     unit_price: number,               // price per sold unit (pack price for variations)
  *     discount: number,
@@ -55,15 +57,16 @@ export function usePosCart() {
     );
     const isEmpty = computed(() => lines.value.length === 0);
 
-    function addLine(product, variation = null, unit = null, quantity = 1, unitPrice = null) {
+    function addLine(product, variation = null, unit = null, quantity = 1, unitPrice = null, batch = null) {
         const variationId = variation?.id ?? product.variation_id ?? null;
         const unitId = unit?.id ?? product.unit_id ?? null;
         const unitName = unit?.name ?? product.unit_name ?? '';
         const multiplier = Math.max(1, Number(variation?.quantity_multiplier ?? 1));
         const price = unitPrice ?? pickPrice(product, variation);
 
+        const batchId = batch?.id ?? null;
         const existing = lines.value.find(
-            (l) => l.product_id === product.id && l.variation_id === variationId && l.unit_id === unitId
+            (l) => l.product_id === product.id && l.variation_id === variationId && l.unit_id === unitId && l.batch_id === batchId
         );
         if (existing) {
             existing.quantity = Number(existing.quantity) + Number(quantity);
@@ -81,6 +84,8 @@ export function usePosCart() {
             quantity_multiplier: multiplier,
             unit_id: unitId,
             unit_name: unitName,
+            batch_id: batch?.id ?? null,
+            batch_number: batch?.batch_number ?? null,
             quantity: Number(quantity),
             unit_price: round2(price),
             discount: 0,
@@ -224,6 +229,7 @@ export function usePosCart() {
                 product_id: l.product_id,
                 variation_id: l.variation_id ?? null,
                 unit_id: l.unit_id,
+                batch_id: l.batch_id ?? null,
                 quantity: Number(l.quantity),
                 unit_price: Number(l.unit_price),
                 discount: Number(l.discount || 0),

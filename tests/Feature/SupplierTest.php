@@ -15,14 +15,24 @@ class SupplierTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $this->artisan('db:seed', ['--class' => \Database\Seeders\RolePermissionSeeder::class]);
     }
 
     protected function actingAsRole(string $role): string
     {
-        $user = User::where('role', $role)->first();
-        $token = $user->createToken('test')->plainTextToken;
-        return $token;
+        $user = User::factory()->create(['role' => $role]);
+        $spatieRole = match ($role) {
+            'admin' => 'administrator',
+            'manager' => 'manager',
+            'cashier' => 'cashier',
+            'warehouse' => 'warehouse_staff',
+            'purchasing' => 'purchasing_staff',
+            'delivery' => 'delivery_staff',
+            'salesperson' => 'sales_staff',
+            default => 'cashier',
+        };
+        $user->assignRole($spatieRole);
+        return $user->createToken('test')->plainTextToken;
     }
 
     public function test_admin_can_list_suppliers(): void

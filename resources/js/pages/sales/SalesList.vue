@@ -71,12 +71,12 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <BaseCard padding="md">
                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Today</p>
-                <p class="mt-1 text-2xl font-bold text-slate-900">{{ formatCurrency(todayTotal) }}</p>
+                <p class="mt-1 text-2xl font-bold text-slate-900">{{ formatMoney(todayTotal) }}</p>
                 <p class="mt-1 text-xs text-slate-500">{{ todayCount }} sale(s)</p>
             </BaseCard>
             <BaseCard padding="md">
                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">This week</p>
-                <p class="mt-1 text-2xl font-bold text-slate-900">{{ formatCurrency(weekTotal) }}</p>
+                <p class="mt-1 text-2xl font-bold text-slate-900">{{ formatMoney(weekTotal) }}</p>
                 <p class="mt-1 text-xs text-slate-500">{{ weekCount }} sale(s)</p>
             </BaseCard>
             <BaseCard padding="md">
@@ -107,7 +107,7 @@
                 {{ row.warehouse?.name || '\u2014' }}
             </template>
             <template #cell-total="{ row }">
-                {{ formatCurrency(row.total) }}
+                {{ formatMoney(row.total) }}
             </template>
             <template #cell-status="{ row }">
                 <BaseBadge :variant="statusVariant(row.status)">{{ row.status }}</BaseBadge>
@@ -155,12 +155,14 @@ import BaseCard from '@/components/ui/BaseCard.vue';
 import BaseBadge from '@/components/ui/BaseBadge.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
+import { useCurrency } from '@/composables/useCurrency';
 
 const auth = useAuthStore();
 const store = useSalesStore();
 const warehousesStore = useWarehousesStore();
 const toast = useToastStore();
 const api = useApi();
+const { formatMoney } = useCurrency();
 
 const columns = [
     { key: 'invoice', label: 'Invoice', sortable: false },
@@ -240,10 +242,7 @@ function statusVariant(status) {
     }[status]) || 'neutral';
 }
 
-function formatCurrency(value) {
-    const n = Number(value) || 0;
-    return '$' + n.toFixed(2);
-}
+
 
 function formatDateTime(value) {
     if (!value) return '\u2014';

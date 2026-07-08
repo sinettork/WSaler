@@ -1,8 +1,8 @@
 # Cambodia Address Cascader — Design
 
-**Date**: 2026-06-27
-**Status**: Approved
-**Scope**: Replace the simple `address` text field in Customer, Supplier, and Warehouse forms with a Taobao/Shopee-style cascading address selector for Cambodia (Province → District → Commune → Village), with bilingual (English + Khmer) labels.
+**Date**: 2026-06-27 (amended 2026-06-28)
+**Status**: Approved (amended — see `.kimchi/docs/drafts/cambodia-address-cascader-amendment.md`)
+**Scope**: Replace the simple `address` text field in Customer, Supplier, and Warehouse forms with a Taobao/Shopee-style cascading address selector for Cambodia (Province → District → Commune → Village), with bilingual (English + Khmer) labels. Includes an explicit outside-Cambodia free-text mode (added by amendment).
 
 ## Goals
 
@@ -17,7 +17,7 @@
 - Geocoding or lat/lng
 - Reverse address lookup
 - Address change audit history
-- Other countries' administrative divisions
+- Other countries' administrative divisions (Cambodia-only cascade is supported; non-Cambodia addresses use a single free-text mode — see amendment)
 - Autocomplete-from-free-text on legacy `address` rows
 
 ## Decisions Made (locked during brainstorming)
@@ -49,13 +49,16 @@
 - One reusable `AddressCascader.vue` component in `resources/js/components/`.
 - 4 `<BaseSelect>` instances rendered in order; lower levels disabled until parent is chosen.
 - Commune (≥30 options) and Village (≥30 options) lists get a search/typeahead filter.
-- Emits a flat `{ province_id, district_id, commune_id, village_id, address }` object.
+- Emits a flat `{ country, province_id, district_id, commune_id, village_id, address, address_line2 }` object.
 - Pinia store `resources/js/stores/addresses.js` handles fetching with in-memory caching per session.
+- **Outside-Cambodia mode** (added by amendment): a single "Address is outside Cambodia" checkbox toggles a free-text mode (Country / City / Street / Address line 2) in place of the 4 cascading selects.
 
 ### Data model changes (existing tables)
 
 - Add nullable `province_id`, `district_id`, `commune_id`, `village_id` FK columns to `customers`, `suppliers`, `warehouses`.
+- Add nullable `country` (string, max 100) and `address_line2` (string, max 500) columns to `customers`, `suppliers`, `warehouses` (added by amendment).
 - Keep the existing `address` text field unchanged.
+- **Row mode convention** (added by amendment): `country` null/empty = Cambodia mode (cascader applies, FK columns may be set). `country` non-empty = outside-Cambodia mode (FK columns must be NULL, `address` is required).
 
 ### Dataset source
 
@@ -104,6 +107,14 @@ province_id (nullable fk -> provinces.id),
 district_id  (nullable fk -> districts.id),
 commune_id   (nullable fk -> communes.id),
 village_id   (nullable fk -> villages.id)
+```
+
+**`add_country_and_address_line2_to_customers_table`**, **`…_suppliers_table`**, **`…_warehouses_table`** *(added by amendment)*
+
+Add 2 nullable columns (no backfill; existing rows get NULL):
+```
+country       (nullable string 100)
+address_line2 (nullable string 500)
 ```
 
 All migrations are additive. Rollback is safe (drops new tables / columns).
@@ -181,16 +192,26 @@ No `auth:sanctum`, no `permission:` middleware. Address reference data is not se
 
 Added to `StoreCustomerRequest`, `UpdateCustomerRequest`, `StoreSupplierRequest`, `UpdateSupplierRequest`, `StoreWarehouseRequest`, `UpdateWarehouseRequest`:
 ```php
-'province_id' => 'nullable|exists:provinces,id',
-'district_id'  => 'nullable|exists:districts,id',
-'commune_id'   => 'nullable|exists:communes,id',
-'village_id'   => 'nullable|exists:villages,id',
-'address'      => 'nullable|string|max:500',
+'province_id'   => 'nullable|exists:provinces,id',
+'district_id'   => 'nullable|exists:districts,id',
+'commune_id'    => 'nullable|exists:communes,id',
+'village_id'    => 'nullable|exists:villages,id',
+'country'       => 'nullable|string|max:100',           // added by amendment
+'address_line2' => 'nullable|string|max:500',           // added by amendment
+'address'       => 'nullable|string|max:500',
 ```
+
+**Conditional rule** (added by amendment, implemented via `withValidator` in each FormRequest):
+- If `country` is non-empty:
+  - `address` becomes required.
+  - `province_id`, `district_id`, `commune_id`, `village_id` must be absent (null). Mixed Cambodia + foreign data on one row is rejected with 422.
+- If `country` is null/empty: Cambodia rules apply (FK columns optional, `address` optional).
 
 ### 2.7 Resources
 
 `CustomerResource`, `SupplierResource`, `WarehouseResource` updated to eager-load `province`, `district`, `commune`, `village` and expose their localized names so list views can render the full address without extra joins.
+
+When `country` is non-empty (added by amendment), the resource also exposes the `country` and `address_line2` fields so list views can render non-Cambodia rows without extra joins.
 
 ---
 
@@ -202,18 +223,21 @@ Added to `StoreCustomerRequest`, `UpdateCustomerRequest`, `StoreSupplierRequest`
 ```ts
 {
   modelValue: {
-    province_id: number|null,
-    district_id: number|null,
-    commune_id:  number|null,
-    village_id:  number|null,
-    address:     string
+    country:        string,        // '' or null = Cambodia mode (added by amendment)
+    province_id:    number|null,
+    district_id:    number|null,
+    commune_id:     number|null,
+    village_id:     number|null,
+    address:        string,
+    address_line2?: string         // added by amendment
   },
   required?: {
     province?: boolean, district?: boolean,
     commune?: boolean, village?: boolean
   },
   errors?: Record<string, string>,
-  showAddressField?: boolean   // default true
+  showAddressField?: boolean,    // default true
+  showCountryToggle?: boolean    // default true (added by amendment)
 }
 ```
 
@@ -228,6 +252,12 @@ update:modelValue  // same shape, on every change
 - Child selects disabled until parent has a value.
 - Commune & Village (≥30 options) get a client-side typeahead filter on top of the store's cached list.
 - Loading state shown inside each select during fetch.
+- **Outside-Cambodia mode** *(added by amendment).* A checkbox "Address is outside Cambodia" sits above the 4 selects. When checked, the cascader hides and 4 free-text inputs appear:
+  - **Country** (text — feeds the `country` column).
+  - **City** (text — folded into `address` on submit, e.g. "District 1, Ho Chi Minh City").
+  - **Street address** (textarea — feeds the `address` column).
+  - **Address line 2** (text, optional — feeds the `address_line2` column for unit/floor/building).
+  - Toggling the checkbox off clears `country` and `address_line2` and restores the cascader (FK state is preserved if any were set). Initial mode is derived from `modelValue.country`: non-empty = outside-Cambodia, empty/null = Cambodia.
 
 ### 3.2 `resources/js/stores/addresses.js`
 
@@ -260,25 +290,35 @@ In `CustomerForm.vue`, `SupplierForm.vue`, `WarehouseForm.vue`:
 2. Extend `form` reactive object:
    ```js
    addresses: {
+     country: '',                  // '' = Cambodia mode (added by amendment)
      province_id: null, district_id: null,
      commune_id: null,  village_id: null,
-     address: ''
+     address: '',
+     address_line2: ''             // added by amendment
    }
    ```
 3. `save()` payload spreads structured fields onto the request:
    ```js
-   payload.province_id = form.addresses.province_id
-   payload.district_id = form.addresses.district_id
-   payload.commune_id  = form.addresses.commune_id
-   payload.village_id  = form.addresses.village_id
-   payload.address     = form.addresses.address
+   payload.country       = form.addresses.country || null       // added by amendment
+   payload.address_line2 = form.addresses.address_line2 || null // added by amendment
+   payload.province_id   = form.addresses.province_id
+   payload.district_id   = form.addresses.district_id
+   payload.commune_id    = form.addresses.commune_id
+   payload.village_id    = form.addresses.village_id
+   payload.address       = form.addresses.address
    ```
-4. Edit-mode loader populates `form.addresses` from server-side eager-loaded FK fields.
+4. Edit-mode loader populates `form.addresses` from server-side eager-loaded FK fields, including `country` and `address_line2` (added by amendment).
 5. List views (`Customers.vue`, `Suppliers.vue`, `Warehouses.vue`) render:
-   ```
-   #123, St. 271 • Phnom Penh • Doun Penh • Sangkat Wat Phnom
-   ```
-   Fall back to raw `address` text when no structured data is set.
+   - Cambodia rows (country empty):
+     ```
+     #123, St. 271 • Phnom Penh • Doun Penh • Sangkat Wat Phnom
+     ```
+     Fall back to raw `address` text when no structured data is set.
+   - Non-Cambodia rows (country non-empty, added by amendment):
+     ```
+     123 Le Loi, District 1 • Floor 3 • Vietnam
+     ```
+     Format: `<address> [• <address_line2>] • <country>`. `address_line2` is omitted when empty.
 
 ---
 
@@ -295,6 +335,9 @@ Run in this order in a single deploy:
 6. `php artisan make:migration add_address_fks_to_suppliers_table`
 7. `php artisan make:migration add_address_fks_to_warehouses_table`
 8. `php artisan db:seed --class=ProvincesSeeder --class=DistrictsSeeder --class=CommunesSeeder --class=VillagesSeeder`
+9. `php artisan make:migration add_country_and_address_line2_to_customers_table` *(amendment)*
+10. `php artisan make:migration add_country_and_address_line2_to_suppliers_table` *(amendment)*
+11. `php artisan make:migration add_country_and_address_line2_to_warehouses_table` *(amendment)*
 
 ### 4.2 Testing
 
@@ -308,6 +351,12 @@ Run in this order in a single deploy:
   - Creating with all 4 FKs persists correctly.
   - Validation rejects non-existent FK ids.
   - Edit restores the cascader selection.
+- `OutsideCambodiaAddressTest.php` *(added by amendment — one file covers all three entities)*
+  - Customer/Supplier/Warehouse: creating with `country` non-empty + `address` saves correctly with all 4 FK columns NULL and `address_line2` persisted when supplied.
+  - Validation rejects mixed rows: setting `country` + any of the 4 FK columns returns 422.
+  - Validation rejects non-Cambodia rows missing `address` (422).
+  - Edit flow: loading a non-Cambodia row restores Country / City / Street / Line 2 inputs and the toggle stays checked.
+  - Cambodia-row round-trip: a Cambodia row (country = null) still loads and saves with no behavioural change (regression guard).
 
 **Component test** (Vitest + @vue/test-utils; add minimally if not present)
 - `AddressCascader.spec.js`
@@ -354,6 +403,7 @@ Run in this order in a single deploy:
 - `tests/Feature/CustomerAddressTest.php`
 - `tests/Feature/SupplierAddressTest.php`
 - `tests/Feature/WarehouseAddressTest.php`
+- `tests/Feature/OutsideCambodiaAddressTest.php` *(amendment)*
 
 ### Backend (modified)
 - `routes/api.php` — add address routes
@@ -361,11 +411,14 @@ Run in this order in a single deploy:
 - `database/migrations/*_add_address_fks_to_customers_table.php`
 - `database/migrations/*_add_address_fks_to_suppliers_table.php`
 - `database/migrations/*_add_address_fks_to_warehouses_table.php`
+- `database/migrations/*_add_country_and_address_line2_to_customers_table.php` *(amendment)*
+- `database/migrations/*_add_country_and_address_line2_to_suppliers_table.php` *(amendment)*
+- `database/migrations/*_add_country_and_address_line2_to_warehouses_table.php` *(amendment)*
 - `app/Http/Requests/StoreCustomerRequest.php`, `UpdateCustomerRequest.php`
 - `app/Http/Requests/StoreSupplierRequest.php`, `UpdateSupplierRequest.php`
-- `app/Http/Requests/StoreWarehouseRequest.php`, `UpdateWarehouseRequest.php`
-- `app/Http/Resources/CustomerResource.php`, `SupplierResource.php`, `WarehouseResource.php`
-- `app/Models/Customer.php`, `Supplier.php`, `Warehouse.php` — add relationships
+- `app/Http/Requests/StoreWarehouseRequest.php`, `UpdateWarehouseRequest.php` — extend with `country`, `address_line2`, and `withValidator` conditional rules *(amendment)*
+- `app/Http/Resources/CustomerResource.php`, `SupplierResource.php`, `WarehouseResource.php` — expose `country` and `address_line2` *(amendment)*
+- `app/Models/Customer.php`, `Supplier.php`, `Warehouse.php` — add relationships, fillable additions for `country` and `address_line2` *(amendment)*
 
 ### Frontend (new)
 - `resources/js/components/AddressCascader.vue`
@@ -373,13 +426,13 @@ Run in this order in a single deploy:
 - `resources/js/components/__tests__/AddressCascader.spec.js` (if Vitest added)
 
 ### Frontend (modified)
-- `resources/js/pages/master/CustomerForm.vue`
-- `resources/js/pages/master/SupplierForm.vue`
-- `resources/js/pages/master/WarehouseForm.vue`
-- `resources/js/pages/master/Customers.vue`
-- `resources/js/pages/master/Suppliers.vue`
-- `resources/js/pages/master/Warehouses.vue`
-- `resources/js/stores/customers.js`, `stores/suppliers.js`, `stores/warehouses.js` (load FK ids into the form model)
+- `resources/js/pages/master/CustomerForm.vue` — `country` + `address_line2` in form model and save payload *(amendment)*
+- `resources/js/pages/master/SupplierForm.vue` — `country` + `address_line2` in form model and save payload *(amendment)*
+- `resources/js/pages/master/WarehouseForm.vue` — `country` + `address_line2` in form model and save payload *(amendment)*
+- `resources/js/pages/master/Customers.vue` — non-Cambodia row rendering *(amendment)*
+- `resources/js/pages/master/Suppliers.vue` — non-Cambodia row rendering *(amendment)*
+- `resources/js/pages/master/Warehouses.vue` — non-Cambodia row rendering *(amendment)*
+- `resources/js/stores/customers.js`, `stores/suppliers.js`, `stores/warehouses.js` — load FK ids into the form model; also load `country` and `address_line2` *(amendment)*
 
 ---
 
@@ -396,3 +449,9 @@ Run in this order in a single deploy:
 9. List views render "Street • Village • Commune • District • Province" or fall back to the raw `address` text.
 10. Switching the UI locale to Khmer shows Khmer names in the cascader labels.
 11. All new feature tests pass; existing tests still pass (no regressions).
+12. *(amendment)* Customer/Supplier/Warehouse forms display an "Address is outside Cambodia" checkbox above the cascader; checking it hides the 4 selects and reveals Country / City / Street / Address line 2 inputs.
+13. *(amendment)* Saving a non-Cambodia row stores `country` non-empty, all 4 FK columns NULL, `address` non-empty, and `address_line2` exactly as supplied.
+14. *(amendment)* Validation rejects mixed rows (`country` non-empty plus any of the 4 FK columns) with 422 and a clear error.
+15. *(amendment)* List views render non-Cambodia rows as `<address> [• <address_line2>] • <country>` without breaking the Cambodia hierarchical layout.
+16. *(amendment)* Existing Cambodia rows still load and display correctly after the migration (`country` defaults to NULL, cascader unchanged).
+17. *(amendment)* All new feature tests pass; existing tests still pass (no regressions).

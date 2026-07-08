@@ -1,25 +1,61 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────────────────
+ * WSaler design tokens
+ *
+ * Palette is industrial-blue brand on neutral slate. Status colors are
+ * SEMANTIC (used to signal stock state / approval state / severity),
+ * never decorative. Mono is reserved for SKU, batch numbers, quantities,
+ * and timestamps so columns of numbers line up vertically.
+ *
+ * If you change a value here, every utility class using it (bg-brand-*,
+ * text-status-*, etc.) updates automatically.
+ * ────────────────────────────────────────────────────────────────────── */
 @theme {
-  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  /* Type system — Google Sans for Latin/English; Noto Sans Khmer kept for actual Khmer script */
+  --font-sans: "Google Sans", "Instrument Sans", "Noto Sans Khmer", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "IBM Plex Mono", "SFMono-Regular", monospace;
 
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
-  --color-brand-500: #6366f1;
-  --color-brand-600: #4f46e5;
-  --color-brand-700: #4338ca;
-  --color-brand-800: #3730a3;
+  /* Brand — industrial sky (was indigo). Used SPARINGLY for primary actions,
+     active nav, focus rings. Most surface color comes from neutral slate. */
+  --color-brand-50:  #f0f9ff;
+  --color-brand-100: #e0f2fe;
+  --color-brand-200: #bae6fd;
+  --color-brand-500: #0369a1;
+  --color-brand-600: #0c4a6e;
+  --color-brand-700: #075985;
+  --color-brand-800: #053f5b;
 
-  --color-sidebar-bg: #0f172a;
-  --color-sidebar-fg: #e2e8f0;
-  --color-sidebar-muted: #94a3b8;
-  --color-sidebar-active: #1e293b;
-  --color-sidebar-border: #1e293b;
+  /* Sidebar — charcoal (was slate-900). Slightly darker and more neutral
+     than the previous indigo-tinted slate for a "real tool" feel. */
+  --color-sidebar-bg: #09090b;
+  --color-sidebar-fg: #d4d4d8;
+  --color-sidebar-muted: #71717a;
+  --color-sidebar-active: #18181b;
+  --color-sidebar-border: #27272a;
+  --color-sidebar-accent: #38bdf8;
+
+  /* Semantic status palette — used consistently for stock expiry, sale
+     state, approval status, and severity. Use the `-bg` variants for
+     pill backgrounds and the base variants for text/borders/icons. */
+  --color-status-fresh:        #15803d;  /* batch fresh, stock OK, sale paid */
+  --color-status-fresh-bg:     #dcfce7;
+  --color-status-warning:      #a16207;  /* near expiry, low stock, pending */
+  --color-status-warning-bg:   #fef3c7;
+  --color-status-critical:     #b91c1c;  /* expired, out of stock, overdue */
+  --color-status-critical-bg:  #fee2e2;
+  --color-status-info:         #1d4ed8;  /* draft, in-transit, informational */
+  --color-status-info-bg:      #dbeafe;
 }
 
 @layer base {
   html {
     font-family: var(--font-sans);
+  }
+
+  html:lang(km) {
+    /* Khmer script needs the dedicated Noto face for correct rendering. */
+    font-family: "Google Sans", "Noto Sans Khmer", "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
   }
 
   body {
@@ -29,4 +65,32 @@
   :focus-visible {
     @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-white;
   }
+}
+
+@layer utilities {
+  /* Tabular numerals — pair with mono for SKUs, batch no., quantities.
+     Numbers line up vertically in tables when scanned. */
+  .font-mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Status dot — small colored indicator used in lists and chips.
+     Pair with sr-only text for accessibility. */
+  .status-dot {
+    display: inline-block;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 9999px;
+    flex-shrink: 0;
+  }
+  .status-dot-fresh    { background: var(--color-status-fresh); }
+  .status-dot-warning  { background: var(--color-status-warning); }
+  .status-dot-critical { background: var(--color-status-critical); }
+  .status-dot-info     { background: var(--color-status-info); }
 }

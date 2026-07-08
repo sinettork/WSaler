@@ -1,0 +1,144 @@
+/* Variant A — Warehouse Operational
+ * Concrete-grey base, functional safety colors, dense data tables,
+ * industrial / back-office feel. Designed for power users who live
+ * in the app 8 hours a day.
+ *
+ * Token strategy: override Tailwind v4 default palette colors via
+ * CSS custom properties on the `.va` wrapper. All utility classes
+ * (`bg-stone-50`, `text-stone-900`, etc.) automatically resolve to
+ * the overridden values inside the wrapper.
+ */
+
+.va {
+    /* Base surfaces */
+    --color-stone-50:  #f5f5f4;
+    --color-stone-100: #e7e5e4;
+    --color-stone-200: #d6d3d1;
+    --color-stone-300: #a8a29e;
+    --color-stone-400: #78716c;
+    --color-stone-500: #57534e;
+    --color-stone-600: #44403c;
+    --color-stone-700: #292524;
+    --color-stone-800: #1c1917;
+    --color-stone-900: #0c0a09;
+    --color-stone-950: #050505;
+
+    /* Sidebar — near-black industrial */
+    --color-va-sidebar-bg: #1c1917;
+    --color-va-sidebar-fg: #e7e5e4;
+    --color-va-sidebar-muted: #a8a29e;
+    --color-va-sidebar-active: #292524;
+    --color-va-sidebar-border: #292524;
+    --color-va-sidebar-accent: #f59e0b;
+
+    /* Brand — industrial blue, used SPARINGLY for primary actions */
+    --color-brand-50:  #f0f9ff;
+    --color-brand-100: #e0f2fe;
+    --color-brand-500: #0369a1;
+    --color-brand-600: #0c4a6e;
+    --color-brand-700: #075985;
+    --color-brand-800: #0c4a6e;
+
+    /* Functional status colors (used semantically, never decoratively) */
+    --va-fresh:     #15803d;  /* batch fresh, stock ok, sale paid */
+    --va-warning:   #a16207;  /* near expiry, low stock, pending approval */
+    --va-critical:  #b91c1c;  /* expired, out of stock, overdue */
+    --va-info:      #1d4ed8;  /* draft, in-transit, informational */
+
+    /* Tints for backgrounds */
+    --va-fresh-bg:     #dcfce7;
+    --va-warning-bg:   #fef3c7;
+    --va-critical-bg:  #fee2e2;
+    --va-info-bg:      #dbeafe;
+
+    /* Typography */
+    --va-font-sans: "Google Sans", "Inter", "Noto Sans Khmer", system-ui, sans-serif;
+    --va-font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+
+    background: var(--color-stone-50);
+    color: var(--color-stone-800);
+    font-family: var(--va-font-sans);
+}
+
+/* Tighter base type for density */
+.va { font-size: 14px; line-height: 1.45; }
+.va h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.01em; }
+.va h2 { font-size: 0.95rem; font-weight: 600; letter-spacing: -0.005em; }
+
+/* Mono utility */
+.va .va-mono {
+    font-family: var(--va-font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+}
+
+/* Status badges — functional, not decorative */
+.va .va-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.4rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-radius: 0.125rem;
+    border: 1px solid transparent;
+}
+.va .va-badge-fresh    { background: var(--va-fresh-bg);    color: var(--va-fresh);    border-color: var(--va-fresh); }
+.va .va-badge-warning  { background: var(--va-warning-bg);  color: var(--va-warning);  border-color: var(--va-warning); }
+.va .va-badge-critical { background: var(--va-critical-bg); color: var(--va-critical); border-color: var(--va-critical); }
+.va .va-badge-info     { background: var(--va-info-bg);     color: var(--va-info);     border-color: var(--va-info); }
+
+/* Status dots */
+.va .va-dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    flex-shrink: 0;
+}
+.va .va-dot-fresh    { background: var(--va-fresh); }
+.va .va-dot-warning  { background: var(--va-warning); }
+.va .va-dot-critical { background: var(--va-critical); }
+.va .va-dot-info     { background: var(--va-info); }
+
+/* Dense table row */
+.va .va-row {
+    display: grid;
+    align-items: center;
+    height: 2.5rem;            /* 40px — much denser than current */
+    padding: 0 0.75rem;
+    border-bottom: 1px solid var(--color-stone-200);
+    font-size: 0.8125rem;
+    transition: background-color 80ms;
+}
+.va .va-row:hover { background: var(--color-stone-100); }
+.va .va-row-header {
+    background: var(--color-stone-100);
+    color: var(--color-stone-600);
+    font-weight: 600;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Sidebar nav item */
+.va .va-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.4375rem 0.75rem;
+    color: var(--color-va-sidebar-fg);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+.va .va-nav-item:hover { background: var(--color-va-sidebar-active); }
+.va .va-nav-item-active {
+    background: var(--color-va-sidebar-active);
+    color: white;
+    border-left: 2px solid var(--color-va-sidebar-accent);
+    padding-left: calc(0.75rem - 2px);
+}

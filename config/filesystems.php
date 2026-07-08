@@ -28,6 +28,8 @@ return [
     |
     */
 
+    'max_upload_size' => env('MAX_UPLOAD_SIZE', 5120), // in KB (default 5MB)
+
     'disks' => [
 
         'local' => [

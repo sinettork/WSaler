@@ -14,14 +14,25 @@ class UserManagementTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $this->artisan('db:seed', ['--class' => \Database\Seeders\RolePermissionSeeder::class]);
+        $this->artisan('db:seed', ['--class' => \Database\Seeders\RoleSeeder::class]);
     }
 
     protected function actingAsRole(string $role): string
     {
-        $user = User::where('role', $role)->first();
-        $token = $user->createToken('test')->plainTextToken;
-        return $token;
+        $user = User::factory()->create(['role' => $role]);
+        $spatieRole = match ($role) {
+            'admin' => 'administrator',
+            'manager' => 'manager',
+            'cashier' => 'cashier',
+            'warehouse' => 'warehouse_staff',
+            'purchasing' => 'purchasing_staff',
+            'delivery' => 'delivery_staff',
+            'salesperson' => 'sales_staff',
+            default => 'cashier',
+        };
+        $user->assignRole($spatieRole);
+        return $user->createToken('test')->plainTextToken;
     }
 
     public function test_admin_can_list_users(): void
@@ -82,7 +93,7 @@ class UserManagementTest extends TestCase
     public function test_admin_can_update_user(): void
     {
         $token = $this->actingAsRole(UserRole::Administrator->value);
-        $target = User::where('email', 'cashier@example.com')->first();
+        $target = User::factory()->create(['email' => 'cashier-target@example.com', 'role' => UserRole::Cashier->value]);
 
         $response = $this->withHeader('Authorization', 'Bearer '.$token)
             ->putJson('/api/users/'.$target->id, [
@@ -96,18 +107,19 @@ class UserManagementTest extends TestCase
 
     public function test_admin_cannot_delete_self(): void
     {
-        $user = User::where('email', 'admin@example.com')->first();
-        $token = $user->createToken('test')->plainTextToken;
+        $admin = User::factory()->create(['role' => UserRole::Administrator->value]);
+        $admin->assignRole('administrator');
+        $token = $admin->createToken('test')->plainTextToken;
 
         $response = $this->withHeader('Authorization', 'Bearer '.$token)
-            ->deleteJson('/api/users/'.$user->id);
+            ->deleteJson('/api/users/'.$admin->id);
         $response->assertStatus(422);
     }
 
     public function test_admin_can_delete_other_user(): void
     {
         $token = $this->actingAsRole(UserRole::Administrator->value);
-        $target = User::where('email', 'cashier@example.com')->first();
+        $target = User::factory()->create(['email' => 'cashier-to-delete@example.com', 'role' => UserRole::Cashier->value]);
 
         $response = $this->withHeader('Authorization', 'Bearer '.$token)
             ->deleteJson('/api/users/'.$target->id);

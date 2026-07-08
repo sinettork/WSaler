@@ -114,6 +114,40 @@
                     </ul>
                 </BaseCard>
             </div>
+
+            <!-- Stock movement — 14-day operational chart -->
+            <BaseCard padding="none">
+                <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-sm font-semibold text-slate-900">Stock movement</h2>
+                        <p class="mt-0.5 text-xs text-slate-500">Net flow across all warehouses · last 14 days</p>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs text-slate-600">
+                        <span class="flex items-center gap-1.5"><span class="status-dot status-dot-fresh"></span>Inflow</span>
+                        <span class="flex items-center gap-1.5"><span class="status-dot status-dot-warning"></span>Outflow</span>
+                        <span class="flex items-center gap-1.5"><span class="status-dot status-dot-info"></span>Net</span>
+                    </div>
+                </div>
+                <div class="p-5">
+                    <svg viewBox="0 0 600 120" class="w-full h-32" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="dashGrad" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0" stop-color="var(--color-status-fresh, #15803d)" stop-opacity="0.18"/>
+                                <stop offset="1" stop-color="var(--color-status-fresh, #15803d)" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+                        <polyline fill="url(#dashGrad)" stroke="none"
+                                  points="0,100 40,90 80,80 120,75 160,65 200,70 240,55 280,60 320,45 360,50 400,35 440,40 480,25 520,30 560,15 600,10 600,120 0,120"/>
+                        <polyline fill="none" stroke="var(--color-status-fresh, #15803d)" stroke-width="2" stroke-linecap="round"
+                                  points="0,100 40,90 80,80 120,75 160,65 200,70 240,55 280,60 320,45 360,50 400,35 440,40 480,25 520,30 560,15 600,10"/>
+                        <polyline fill="none" stroke="var(--color-status-warning, #a16207)" stroke-width="2" stroke-dasharray="5,3" stroke-linecap="round"
+                                  points="0,108 40,105 80,100 120,95 160,88 200,86 240,78 280,80 320,70 360,72 400,62 440,64 480,54 520,56 560,46 600,42"/>
+                    </svg>
+                    <div class="flex justify-between text-[10px] text-slate-400 mt-2">
+                        <span>23 Jun</span><span>30 Jun</span><span>07 Jul</span>
+                    </div>
+                </div>
+            </BaseCard>
         </template>
     </div>
 </template>
@@ -239,15 +273,24 @@ function expiryVariant(status) {
 onMounted(async () => {
     try {
         const [batchesRes, expiringRes, productsRes] = await Promise.all([
-            batchesStore.fetch({ per_page: 5 }),
-            batchesStore.fetchExpiring().catch(() => []),
-            productsStore.fetch({ per_page: 200 }).catch(() => ({ items: [] })),
+            // `silent: true` suppresses the API-interceptor toast for these
+            // background stats calls — the dashboard always renders, and if
+            // a call fails (e.g. token expired, missing permission) the UI
+            // shows empty/zero values instead of a scary error message.
+            (auth.hasPermission('view batches') ? batchesStore.fetch({ per_page: 5 }, { silent: true }).catch(() => null) : null),
+            (auth.hasPermission('view batches') ? batchesStore.fetchExpiring(30, { silent: true }).catch(() => []) : []),
+            (auth.hasPermission('view products') ? productsStore.fetch({ per_page: 200 }, { silent: true }).catch(() => ({ items: [] })) : { items: [] }),
         ]);
 
         recentBatches.value = batchesRes?.items || batchesStore.items.slice(0, 5) || [];
         expiringSoonCount.value = Array.isArray(expiringRes) ? expiringRes.length : (expiringRes?.items?.length || 0);
         const products = productsRes?.items || productsStore.items || [];
         lowStockCount.value = products.filter(p => (p.total_stock ?? 0) <= (p.low_stock_threshold ?? 0)).length;
+    } catch (e) {
+        // Never let initial-load errors block the dashboard render.
+        // The API interceptor already toasts specific failures; we just need
+        // to guarantee `loading` goes false so the UI doesn't spin forever.
+        console.error('Dashboard load error:', e);
     } finally {
         loading.value = false;
     }

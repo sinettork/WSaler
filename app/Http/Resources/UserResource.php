@@ -15,6 +15,9 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'role' => $this->role instanceof \App\Enums\UserRole ? $this->role->value : $this->role,
             'role_label' => $this->role instanceof \App\Enums\UserRole ? $this->role->label() : $this->role,
+            'permissions' => method_exists($this->resource, 'getAllPermissions')
+                ? $this->resource->getAllPermissions()
+                : [],
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

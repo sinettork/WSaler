@@ -45,8 +45,8 @@
                                         <div v-if="item.unit" class="text-slate-500">{{ item.unit.short_code || item.unit.name }}</div>
                                     </td>
                                     <td class="py-1.5 text-right">{{ item.quantity }}</td>
-                                    <td class="py-1.5 text-right">{{ formatCurrency(item.unit_price) }}</td>
-                                    <td class="py-1.5 text-right font-medium">{{ formatCurrency(item.line_total) }}</td>
+                                    <td class="py-1.5 text-right">{{ formatMoney(item.unit_price) }}</td>
+                                    <td class="py-1.5 text-right font-medium">{{ formatMoney(item.line_total) }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -54,30 +54,30 @@
                         <dl class="text-xs space-y-1 border-t border-slate-200 pt-2 mb-3">
                             <div class="flex justify-between">
                                 <dt class="text-slate-500">Subtotal</dt>
-                                <dd class="text-slate-900">{{ formatCurrency(sale.subtotal) }}</dd>
+                                <dd class="text-slate-900">{{ formatMoney(sale.subtotal) }}</dd>
                             </div>
                             <div v-if="Number(sale.discount) > 0" class="flex justify-between">
                                 <dt class="text-slate-500">Discount</dt>
-                                <dd class="text-slate-900">\u2212{{ formatCurrency(sale.discount) }}</dd>
+                                <dd class="text-slate-900">\u2212{{ formatMoney(sale.discount) }}</dd>
                             </div>
                             <div v-if="Number(sale.tax) > 0" class="flex justify-between">
                                 <dt class="text-slate-500">Tax</dt>
-                                <dd class="text-slate-900">{{ formatCurrency(sale.tax) }}</dd>
+                                <dd class="text-slate-900">{{ formatMoney(sale.tax) }}</dd>
                             </div>
                             <div class="flex justify-between pt-1 border-t border-slate-200">
                                 <dt class="font-bold text-slate-900">TOTAL</dt>
-                                <dd class="font-bold text-base text-slate-900">{{ formatCurrency(sale.total) }}</dd>
+                                <dd class="font-bold text-base text-slate-900">{{ formatMoney(sale.total) }}</dd>
                             </div>
                         </dl>
 
                         <div v-if="(sale.payments || []).length > 0" class="text-xs space-y-0.5 border-t border-slate-200 pt-2 mb-3">
                             <div v-for="(p, i) in sale.payments" :key="i" class="flex justify-between">
                                 <span class="uppercase tracking-wide text-slate-500">{{ p.method.replace('_', ' ') }}</span>
-                                <span class="text-slate-900">{{ formatCurrency(p.amount) }}</span>
+                                <span class="text-slate-900">{{ formatMoney(p.amount) }}</span>
                             </div>
                             <div v-if="Number(sale.change_due) > 0" class="flex justify-between pt-1 border-t border-slate-200">
                                 <span class="font-medium text-slate-900">Change</span>
-                                <span class="font-bold text-emerald-700">{{ formatCurrency(sale.change_due) }}</span>
+                                <span class="font-bold text-emerald-700">{{ formatMoney(sale.change_due) }}</span>
                             </div>
                         </div>
 
@@ -102,16 +102,14 @@
 
 <script setup>
 import BaseButton from '@/components/ui/BaseButton.vue';
+import { useCurrency } from '@/composables/useCurrency';
 
 const props = defineProps({
     sale: { type: Object, required: true },
 });
 defineEmits(['close', 'new']);
 
-function formatCurrency(value) {
-    const n = Number(value) || 0;
-    return '$' + n.toFixed(2);
-}
+
 
 function formatDateTime(value) {
     if (!value) return '\u2014';

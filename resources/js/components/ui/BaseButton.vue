@@ -35,8 +35,8 @@ const variantClasses = {
 
 const sizeClasses = {
     sm: 'px-3 py-1.5 text-sm rounded-md',
-    md: 'px-4 py-2 text-sm rounded-lg',
-    lg: 'px-5 py-2.5 text-base rounded-lg',
+    md: 'px-4 py-2 text-[13px] rounded-md',
+    lg: 'px-5 py-2.5 text-base rounded-md',
 };
 
 const classes = computed(() => [

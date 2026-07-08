@@ -72,12 +72,12 @@
                                         <p class="text-xs text-slate-500">{{ item.product?.sku }}</p>
                                     </td>
                                     <td class="px-5 py-3 text-right text-sm text-slate-700">{{ item.quantity }}</td>
-                                    <td class="px-5 py-3 text-right text-sm text-slate-700">{{ formatCurrency(item.unit_price) }}</td>
+                                    <td class="px-5 py-3 text-right text-sm text-slate-700">{{ formatMoney(item.unit_price) }}</td>
                                     <td class="px-5 py-3 text-right text-sm text-slate-700">
-                                        <span v-if="Number(item.discount) > 0">{{ formatCurrency(item.discount) }}</span>
+                                        <span v-if="Number(item.discount) > 0">{{ formatMoney(item.discount) }}</span>
                                         <span v-else class="text-slate-400">&mdash;</span>
                                     </td>
-                                    <td class="px-5 py-3 text-right text-sm font-semibold text-slate-900">{{ formatCurrency(item.line_total) }}</td>
+                                    <td class="px-5 py-3 text-right text-sm font-semibold text-slate-900">{{ formatMoney(item.line_total) }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -103,19 +103,19 @@
                             <div class="border-t border-slate-100 pt-2 space-y-1.5">
                                 <div class="flex justify-between">
                                     <dt class="text-slate-500">Subtotal</dt>
-                                    <dd class="text-slate-900">{{ formatCurrency(sale.subtotal) }}</dd>
+                                    <dd class="text-slate-900">{{ formatMoney(sale.subtotal) }}</dd>
                                 </div>
                                 <div v-if="Number(sale.discount) > 0" class="flex justify-between">
                                     <dt class="text-slate-500">Discount</dt>
-                                    <dd class="text-slate-900">\u2212{{ formatCurrency(sale.discount) }}</dd>
+                                    <dd class="text-slate-900">\u2212{{ formatMoney(sale.discount) }}</dd>
                                 </div>
                                 <div v-if="Number(sale.tax) > 0" class="flex justify-between">
                                     <dt class="text-slate-500">Tax</dt>
-                                    <dd class="text-slate-900">{{ formatCurrency(sale.tax) }}</dd>
+                                    <dd class="text-slate-900">{{ formatMoney(sale.tax) }}</dd>
                                 </div>
                                 <div class="flex justify-between pt-1.5 border-t border-slate-100">
                                     <dt class="font-semibold text-slate-900">Total</dt>
-                                    <dd class="font-bold text-base text-slate-900">{{ formatCurrency(sale.total) }}</dd>
+                                    <dd class="font-bold text-base text-slate-900">{{ formatMoney(sale.total) }}</dd>
                                 </div>
                             </div>
                         </dl>
@@ -126,18 +126,18 @@
                         <ul v-if="(sale.payments || []).length > 0" class="space-y-2">
                             <li v-for="(p, i) in sale.payments" :key="i" class="flex items-center justify-between text-sm">
                                 <span class="px-2 py-0.5 rounded-full bg-slate-100 text-xs font-medium text-slate-700 uppercase">{{ p.method.replace('_', ' ') }}</span>
-                                <span class="font-medium text-slate-900">{{ formatCurrency(p.amount) }}</span>
+                                <span class="font-medium text-slate-900">{{ formatMoney(p.amount) }}</span>
                             </li>
                         </ul>
                         <p v-else class="text-sm text-slate-500">No payments recorded.</p>
                         <div class="mt-3 pt-3 border-t border-slate-100 space-y-1.5 text-sm">
                             <div class="flex justify-between">
                                 <dt class="text-slate-500">Paid</dt>
-                                <dd class="text-slate-900 font-medium">{{ formatCurrency(sale.paid) }}</dd>
+                                <dd class="text-slate-900 font-medium">{{ formatMoney(sale.paid) }}</dd>
                             </div>
                             <div v-if="Number(sale.change_due) > 0" class="flex justify-between">
                                 <dt class="text-slate-500">Change</dt>
-                                <dd class="font-semibold text-emerald-700">{{ formatCurrency(sale.change_due) }}</dd>
+                                <dd class="font-semibold text-emerald-700">{{ formatMoney(sale.change_due) }}</dd>
                             </div>
                         </div>
                     </BaseCard>
@@ -187,6 +187,7 @@ import BaseBadge from '@/components/ui/BaseBadge.vue';
 import Spinner from '@/components/ui/Spinner.vue';
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 import PosReceipt from './PosReceipt.vue';
+import { useCurrency } from '@/composables/useCurrency';
 
 const route = useRoute();
 const router = useRouter();
@@ -209,10 +210,7 @@ function statusVariant(status) {
     }[status]) || 'neutral';
 }
 
-function formatCurrency(value) {
-    const n = Number(value) || 0;
-    return '$' + n.toFixed(2);
-}
+
 
 function formatDateTime(value) {
     if (!value) return '\u2014';

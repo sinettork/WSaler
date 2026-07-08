@@ -19,7 +19,7 @@ class SaleController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Sale::with(['customer', 'warehouse', 'user', 'items'])
+        $query = Sale::with(['customer', 'warehouse', 'user', 'items.product', 'items.variation', 'items.unit'])
             ->orderByDesc('sold_at')
             ->orderByDesc('id');
 

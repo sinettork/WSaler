@@ -5,15 +5,19 @@ namespace App\Http\Controllers\Api\StockMovements;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StockMovements\IndexStockMovementRequest;
 use App\Models\StockMovement;
+use App\Traits\DataScoping;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class StockMovementController extends Controller
 {
+    use DataScoping;
     public function index(IndexStockMovementRequest $request): AnonymousResourceCollection
     {
         $query = StockMovement::with(['product', 'variation', 'warehouse', 'user'])
             ->orderByDesc('occurred_at')
             ->orderByDesc('id');
+
+        $query = $this->applyDataScoping($query);
 
         if ($request->filled('product_id')) {
             $query->where('product_id', $request->integer('product_id'));

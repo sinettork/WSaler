@@ -44,14 +44,14 @@ class AuthTest extends TestCase
         $response->assertStatus(401);
     }
 
-    public function test_login_with_non_existent_user_returns_422(): void
+    public function test_login_with_non_existent_user_returns_401(): void
     {
         $response = $this->postJson('/api/auth/login', [
             'email' => 'nobody@example.com',
             'password' => 'password',
         ]);
 
-        $response->assertStatus(422);
+        $response->assertStatus(401);
     }
 
     public function test_me_without_auth_returns_401(): void

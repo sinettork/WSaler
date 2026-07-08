@@ -9,12 +9,14 @@ use App\Http\Resources\BatchResource;
 use App\Models\ActivityLog;
 use App\Models\Batch;
 use App\Models\StockMovement;
+use App\Traits\DataScoping;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class BatchController extends Controller
 {
+    use DataScoping;
     public function index(Request $request)
     {
         $query = Batch::with([
@@ -23,6 +25,8 @@ class BatchController extends Controller
             'warehouse:id,name,code',
             'supplier:id,name',
         ]);
+
+        $query = $this->applyDataScoping($query);
 
         if ($productId = $request->query('product_id')) {
             $query->where('product_id', $productId);
@@ -136,33 +140,81 @@ class BatchController extends Controller
 
     public function update(UpdateBatchRequest $request, Batch $batch)
     {
-        $batch->update($request->validated());
+        $trackedKeys = [
+            'batch_number', 'quantity', 'remaining_quantity', 'purchase_cost',
+            'sale_price', 'expiry_date', 'manufacture_date', 'received_date',
+            'status', 'notes',
+        ];
+        $before = $batch->only($trackedKeys);
+
+        DB::transaction(function () use ($batch, $request) {
+            $locked = Batch::whereKey($batch->id)->lockForUpdate()->first();
+            $locked->update($request->validated());
+        });
+
+        $fresh = $batch->fresh();
 
         ActivityLog::create([
             'user_id' => $request->user()->id,
             'action' => 'updated_batch',
-            'description' => "Updated batch {$batch->batch_number}",
+            'description' => "Updated batch {$fresh->batch_number}",
+            'module' => 'inventory',
+            'resource_type' => Batch::class,
+            'resource_id' => $fresh->id,
+            'event' => 'updated',
+            'before' => $before,
+            'after' => $fresh->only($trackedKeys),
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);
 
-        return new BatchResource($batch);
+        return new BatchResource($fresh);
     }
 
     public function destroy(Request $request, Batch $batch)
     {
-        if ($batch->remaining_quantity !== $batch->quantity) {
-            return response()->json([
-                'message' => 'Cannot delete batch with consumed stock. Reverse movements first.',
-            ], 422);
-        }
+        try {
+            DB::transaction(function () use ($batch) {
+                $locked = Batch::whereKey($batch->id)->lockForUpdate()->first();
 
-        $batch->delete();
+                // F4: pre-check. The DB has restrictOnDelete on stock_movements.batch_id,
+                // but we surface a clean 422 with diagnostic counts instead of an opaque 500.
+                $movementsCount = StockMovement::where('batch_id', $locked->id)->count();
+                if ($movementsCount > 0) {
+                    abort(response()->json([
+                        'message' => 'Cannot delete batch: stock_movements reference this batch. Reverse movements first.',
+                        'movements_count' => $movementsCount,
+                    ], 422));
+                }
+
+                if ($locked->remaining_quantity !== $locked->quantity) {
+                    abort(response()->json([
+                        'message' => 'Cannot delete batch with consumed stock. Reverse movements first.',
+                    ], 422));
+                }
+
+                $locked->delete();
+            });
+        } catch (\Illuminate\Database\QueryException $e) {
+            // FK constraint violation (SQLSTATE 23000) — surface as 422.
+            if ($e->getCode() === '23000') {
+                $count = StockMovement::where('batch_id', $batch->id)->count();
+                return response()->json([
+                    'message' => 'Cannot delete batch: stock_movements reference this batch. Reverse movements first.',
+                    'movements_count' => $count,
+                ], 422);
+            }
+            throw $e;
+        }
 
         ActivityLog::create([
             'user_id' => $request->user()->id,
             'action' => 'deleted_batch',
             'description' => "Deleted batch {$batch->batch_number}",
+            'module' => 'inventory',
+            'resource_type' => Batch::class,
+            'resource_id' => $batch->id,
+            'event' => 'deleted',
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);

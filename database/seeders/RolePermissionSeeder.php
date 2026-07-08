@@ -44,6 +44,7 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'view batches', 'description' => 'View batches'],
             ['name' => 'create batches', 'description' => 'Create batches'],
             ['name' => 'edit batches', 'description' => 'Edit batch information'],
+            ['name' => 'delete batches', 'description' => 'Delete batches'],
             ['name' => 'dispose expired stock', 'description' => 'Dispose expired stock'],
 
             // Purchasing
@@ -56,6 +57,7 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'create quotations', 'description' => 'Create quotations'],
             ['name' => 'create sales orders', 'description' => 'Create sales orders'],
             ['name' => 'create invoices', 'description' => 'Create invoices'],
+            ['name' => 'edit invoices', 'description' => 'Edit invoices'],
             ['name' => 'process sales returns', 'description' => 'Process sales returns'],
             ['name' => 'cancel sales', 'description' => 'Cancel sales'],
 
@@ -70,6 +72,7 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'view customers', 'description' => 'View customers'],
             ['name' => 'create customers', 'description' => 'Create customers'],
             ['name' => 'edit customers', 'description' => 'Edit customers'],
+            ['name' => 'delete customers', 'description' => 'Delete customers'],
             ['name' => 'manage credit limits', 'description' => 'Manage credit limits'],
 
             // Supplier Management
@@ -81,6 +84,8 @@ class RolePermissionSeeder extends Seeder
             // Warehouse Management
             ['name' => 'view warehouses', 'description' => 'View warehouses'],
             ['name' => 'create warehouses', 'description' => 'Create warehouses'],
+            ['name' => 'edit warehouses', 'description' => 'Edit warehouses'],
+            ['name' => 'delete warehouses', 'description' => 'Delete warehouses'],
             ['name' => 'manage transfers', 'description' => 'Manage transfers'],
 
             // Accounting
@@ -134,23 +139,27 @@ class RolePermissionSeeder extends Seeder
                 'description' => 'Full system access with all permissions',
                 'permissions' => Permission::all()->pluck('name')->toArray(),
             ],
+            // The following role names must match `App\Enums\UserRole` values,
+            // because the User model casts `role` to that enum and `HasPermissions::hasRole()`
+            // does an exact-name match against `roles.name`. A mismatch here means
+            // users get zero permissions on every endpoint (403).
             [
-                'name' => 'administrator',
+                'name' => 'admin',
                 'description' => 'Administrator with most permissions except user/role management',
                 'permissions' => [
                     'view dashboard', 'view analytics', 'view financial summary',
                     'view products', 'create products', 'edit products', 'delete products', 'import products', 'export products',
                     'view inventory', 'stock adjustment', 'stock transfer', 'approve adjustments', 'view inventory valuation',
-                    'view batches', 'create batches', 'edit batches', 'dispose expired stock',
+                    'view batches', 'create batches', 'edit batches', 'delete batches', 'dispose expired stock',
                     'create purchase orders', 'approve purchase orders', 'receive goods', 'process purchase returns',
-                    'create quotations', 'create sales orders', 'create invoices', 'process sales returns', 'cancel sales',
+                    'create quotations', 'create sales orders', 'create invoices', 'edit invoices', 'process sales returns', 'cancel sales',
                     'access pos', 'apply discounts', 'void transactions', 'reprint receipts', 'open cash drawer',
-                    'view customers', 'create customers', 'edit customers', 'manage credit limits',
+                    'view customers', 'create customers', 'edit customers', 'delete customers', 'manage credit limits',
                     'view suppliers', 'create suppliers', 'edit suppliers', 'delete suppliers',
-                    'view warehouses', 'create warehouses', 'manage transfers',
+                    'view warehouses', 'create warehouses', 'edit warehouses', 'delete warehouses', 'manage transfers',
                     'view financial reports', 'manage expenses', 'manage payments', 'view profit & loss',
                     'view reports', 'export reports', 'print reports',
-                    'view users', 'edit users',
+                    'view users', 'create users', 'edit users', 'delete users',
                     'salespeople.view', 'salespeople.manage',
                     'teams.view', 'teams.manage',
                     'territories.view', 'territories.manage',
@@ -169,13 +178,14 @@ class RolePermissionSeeder extends Seeder
                     'view inventory', 'approve adjustments', 'view inventory valuation',
                     'view batches', 'edit batches', 'dispose expired stock',
                     'create purchase orders', 'approve purchase orders', 'receive goods', 'process purchase returns',
-                    'create quotations', 'create sales orders', 'create invoices', 'process sales returns', 'cancel sales',
+                    'create quotations', 'create sales orders', 'create invoices', 'edit invoices', 'process sales returns', 'cancel sales',
                     'access pos', 'apply discounts', 'void transactions', 'reprint receipts',
-                    'view customers', 'create customers', 'edit customers', 'manage credit limits',
+                    'view customers', 'create customers', 'edit customers', 'delete customers', 'manage credit limits',
                     'view suppliers', 'create suppliers', 'edit suppliers',
                     'view warehouses', 'manage transfers',
                     'view financial reports', 'manage expenses', 'manage payments', 'view profit & loss',
                     'view reports', 'export reports', 'print reports',
+                    'view users',
                     'salespeople.view', 'salespeople.manage',
                     'teams.view', 'teams.manage',
                     'territories.view', 'territories.manage',
@@ -186,8 +196,8 @@ class RolePermissionSeeder extends Seeder
                 ],
             ],
             [
-                'name' => 'sales_staff',
-                'description' => 'Sales staff with quotation, order, and customer access',
+                'name' => 'salesperson',
+                'description' => 'Salesperson with quotation, order, and customer access',
                 'permissions' => [
                     'view products', 'export products',
                     'view inventory',
@@ -215,7 +225,7 @@ class RolePermissionSeeder extends Seeder
                 ],
             ],
             [
-                'name' => 'purchasing_staff',
+                'name' => 'purchasing',
                 'description' => 'Purchasing staff with PO and receiving access',
                 'permissions' => [
                     'view products', 'export products',
@@ -228,7 +238,7 @@ class RolePermissionSeeder extends Seeder
                 ],
             ],
             [
-                'name' => 'warehouse_staff',
+                'name' => 'warehouse',
                 'description' => 'Warehouse staff with inventory and batch management',
                 'permissions' => [
                     'view products',
@@ -240,7 +250,7 @@ class RolePermissionSeeder extends Seeder
                 ],
             ],
             [
-                'name' => 'delivery_staff',
+                'name' => 'delivery',
                 'description' => 'Delivery staff with delivery and transfer access',
                 'permissions' => [
                     'view products',

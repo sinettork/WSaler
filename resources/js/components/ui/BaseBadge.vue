@@ -12,10 +12,10 @@ const props = defineProps({
 
 const variantClasses = {
     neutral: 'bg-slate-100 text-slate-700',
-    success: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20',
-    warning: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20',
-    danger: 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-600/20',
-    info: 'bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-600/20',
+    success: 'bg-status-fresh-bg text-status-fresh ring-1 ring-inset ring-status-fresh/20',
+    warning: 'bg-status-warning-bg text-status-warning ring-1 ring-inset ring-status-warning/20',
+    danger: 'bg-status-critical-bg text-status-critical ring-1 ring-inset ring-status-critical/20',
+    info: 'bg-status-info-bg text-status-info ring-1 ring-inset ring-status-info/20',
     brand: 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-600/20',
 };
 
