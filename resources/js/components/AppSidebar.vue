@@ -233,8 +233,6 @@ function loadExpanded() {
 }
 
 // Watch for route changes and auto-expand relevant sections
-import { watch } from 'vue';
-
 watch(() => route.path, () => {
     for (const section of sections) {
         if (isSectionActive(section)) {
