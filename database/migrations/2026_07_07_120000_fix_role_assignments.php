@@ -69,7 +69,10 @@ return new class extends Migration {
         // Surface the outcome in the migration log so it's obvious whether
         // the fix applied cleanly (e.g. "Linked 6 users; 0 unmatched.").
         $total = User::count();
-        $this->line("  → Role assignment fix: linked {$linked} / {$total} users" . ($unmatched ? " ({$unmatched} unmatched)" : ''));
+        // Note: Only output when running in console context (not during tests)
+        if (method_exists($this, 'command') && $this->command) {
+            $this->command->info("  → Role assignment fix: linked {$linked} / {$total} users" . ($unmatched ? " ({$unmatched} unmatched)" : ''));
+        }
     }
 
     /**
