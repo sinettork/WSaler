@@ -1,0 +1,33 @@
+import i18n from "i18next"
+import LanguageDetector from "i18next-browser-languagedetector"
+import { initReactI18next } from "react-i18next"
+
+import en from "./locales/en.json"
+import km from "./locales/km.json"
+
+export const SUPPORTED_LOCALES = ["en", "km"] as const
+export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
+
+void i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources: {
+      en: { translation: en },
+      km: { translation: km },
+    },
+    fallbackLng: "en",
+    supportedLngs: SUPPORTED_LOCALES,
+    interpolation: { escapeValue: false },
+    detection: {
+      order: ["localStorage", "navigator"],
+      lookupLocalStorage: "wsaler_locale",
+      caches: ["localStorage"],
+    },
+  })
+
+export function setLocale(locale: SupportedLocale) {
+  void i18n.changeLanguage(locale)
+}
+
+export default i18n
