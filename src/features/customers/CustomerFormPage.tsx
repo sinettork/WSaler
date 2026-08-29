@@ -2,19 +2,15 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
+import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
 import { AddressCascader, EMPTY_ADDRESS, type AddressValue } from "@/components/data/AddressCascader"
+import { FormPageHeader } from "@/components/data/FormPageHeader"
+import { FormSection } from "@/components/data/FormSection"
+import { PageSpinner } from "@/components/data/PageSpinner"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   Form,
   FormControl,
@@ -32,9 +28,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { useCreateCustomer, useUpdateCustomer } from "@/features/customers/api"
+import { useCreateCustomer, useCustomer, useUpdateCustomer } from "@/features/customers/api"
 import { CUSTOMER_TYPES, customerSchema, type CustomerFormValues } from "@/features/customers/schemas"
-import type { Customer } from "@/features/customers/types"
 import { parseSupabaseError } from "@/lib/supabase-errors"
 
 const TYPE_LABELS: Record<(typeof CUSTOMER_TYPES)[number], string> = {
@@ -60,26 +55,29 @@ const DEFAULT_VALUES: CustomerFormValues = {
   is_active: true,
 }
 
-interface CustomerFormDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  customer: Customer | null
-}
+const LIST_PATH = "/master/customers"
 
 /**
- * Create/edit dialog for customers. Mirrors
- * legacy-php-vue/resources/js/pages/master/CustomerForm.vue: Identity,
- * Contact (address cascader — province/district/commune required), and
- * Credit & terms sections. Code is auto-assigned server-side (see
- * `nextCustomerCode()` in api.ts) and never shown/edited here on create;
- * shown read-only when editing. Update uses optimistic locking via the
- * customer's `version` — see `useUpdateCustomer()`.
+ * Full-page create/edit form for customers (dedicated route, not a modal),
+ * mirroring legacy-php-vue/resources/js/pages/master/CustomerForm.vue:
+ * Identity, Contact (address cascader — province/district/commune
+ * required), and Credit & terms sections. Code is auto-assigned
+ * server-side (see `nextCustomerCode()` in api.ts) and never shown/edited
+ * here on create; shown read-only when editing. Update uses optimistic
+ * locking via the customer's `version` — see `useUpdateCustomer()`.
  */
-export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFormDialogProps) {
-  const isEditing = customer != null
+export function CustomerFormPage() {
+  const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
+  const customerId = id ? Number(id) : undefined
+  const isEditing = customerId != null
+
+  const customerQuery = useCustomer(customerId)
   const createCustomer = useCreateCustomer()
   const updateCustomer = useUpdateCustomer()
   const isPending = createCustomer.isPending || updateCustomer.isPending
+
+  const customer = customerQuery.data
 
   const [address, setAddress] = useState<AddressValue>(EMPTY_ADDRESS)
 
@@ -89,37 +87,32 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
   })
 
   useEffect(() => {
-    if (open) {
-      if (customer) {
-        form.reset({
-          name: customer.name,
-          contact_person: customer.contact_person ?? "",
-          email: customer.email ?? "",
-          phone: customer.phone ?? "",
-          province_id: customer.province_id,
-          district_id: customer.district_id,
-          commune_id: customer.commune_id,
-          village_id: customer.village_id,
-          address: customer.address ?? "",
-          type: customer.type,
-          credit_limit: customer.credit_limit,
-          payment_terms: customer.payment_terms ?? "",
-          notes: customer.notes ?? "",
-          is_active: customer.is_active,
-        })
-        setAddress({
-          province_id: customer.province_id,
-          district_id: customer.district_id,
-          commune_id: customer.commune_id,
-          village_id: customer.village_id,
-          address: customer.address ?? "",
-        })
-      } else {
-        form.reset(DEFAULT_VALUES)
-        setAddress(EMPTY_ADDRESS)
-      }
+    if (customer) {
+      form.reset({
+        name: customer.name,
+        contact_person: customer.contact_person ?? "",
+        email: customer.email ?? "",
+        phone: customer.phone ?? "",
+        province_id: customer.province_id,
+        district_id: customer.district_id,
+        commune_id: customer.commune_id,
+        village_id: customer.village_id,
+        address: customer.address ?? "",
+        type: customer.type,
+        credit_limit: customer.credit_limit,
+        payment_terms: customer.payment_terms ?? "",
+        notes: customer.notes ?? "",
+        is_active: customer.is_active,
+      })
+      setAddress({
+        province_id: customer.province_id,
+        district_id: customer.district_id,
+        commune_id: customer.commune_id,
+        village_id: customer.village_id,
+        address: customer.address ?? "",
+      })
     }
-  }, [open, customer, form])
+  }, [customer, form])
 
   function handleAddressChange(next: AddressValue) {
     setAddress(next)
@@ -148,14 +141,14 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
       is_active: values.is_active,
     }
     try {
-      if (isEditing) {
+      if (isEditing && customer) {
         await updateCustomer.mutateAsync({ id: customer.id, version: customer.version, input })
         toast.success("Customer updated.")
       } else {
         await createCustomer.mutateAsync(input)
         toast.success("Customer created.")
       }
-      onOpenChange(false)
+      navigate(LIST_PATH)
     } catch (err) {
       const { message, fieldErrors } = parseSupabaseError(err as Error)
       for (const [field, msg] of Object.entries(fieldErrors)) {
@@ -169,21 +162,27 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
     }
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit customer" : "Create customer"}</DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? "Update contact info, type, or credit terms for this customer."
-              : "Add a new customer. A unique code will be assigned automatically."}
-          </DialogDescription>
-        </DialogHeader>
+  if (isEditing && customerQuery.isLoading) {
+    return <PageSpinner label="Loading customer…" />
+  }
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-4">
-            {isEditing && (
+  return (
+    <div>
+      <FormPageHeader
+        backTo={LIST_PATH}
+        backLabel="Back to customers"
+        title={isEditing ? `Update customer: ${customer?.name || "—"}` : "Create customer"}
+        subtitle={
+          isEditing
+            ? "Update contact info, type, or credit terms for this customer."
+            : "Add a new customer. A unique code will be assigned automatically."
+        }
+      />
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-6">
+          <FormSection title="Identity">
+            {isEditing && customer && (
               <div>
                 <FormLabel className="mb-1 block">Code</FormLabel>
                 <Input value={customer.code} disabled />
@@ -243,7 +242,9 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                 )}
               />
             </div>
+          </FormSection>
 
+          <FormSection title="Contact">
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -281,62 +282,62 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                 addressPlaceholder="Street, house number, landmark"
               />
             </div>
+          </FormSection>
 
-            <div className="border-t border-slate-100 pt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="credit_limit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Credit limit</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          {...field}
-                          value={field.value as string | number}
-                          placeholder="0.00"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {isEditing && (
-                  <div>
-                    <FormLabel className="mb-1 block">Current balance</FormLabel>
-                    <Input value={customer.current_balance.toFixed(2)} disabled />
-                  </div>
-                )}
-                <FormField
-                  control={form.control}
-                  name="payment_terms"
-                  render={({ field }) => (
-                    <FormItem className={isEditing ? "col-span-2" : ""}>
-                      <FormLabel>Payment terms</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="e.g. Net 30" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+          <FormSection title="Credit & terms">
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="notes"
+                name="credit_limit"
                 render={({ field }) => (
-                  <FormItem className="mt-4">
-                    <FormLabel>Notes</FormLabel>
+                  <FormItem>
+                    <FormLabel>Credit limit</FormLabel>
                     <FormControl>
-                      <Textarea {...field} rows={2} placeholder="Internal notes" />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        {...field}
+                        value={field.value as string | number}
+                        placeholder="0.00"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {isEditing && customer && (
+                <div>
+                  <FormLabel className="mb-1 block">Current balance</FormLabel>
+                  <Input value={customer.current_balance.toFixed(2)} disabled />
+                </div>
+              )}
+              <FormField
+                control={form.control}
+                name="payment_terms"
+                render={({ field }) => (
+                  <FormItem className={isEditing ? "col-span-2" : ""}>
+                    <FormLabel>Payment terms</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g. Net 30" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} rows={2} placeholder="Internal notes" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -350,24 +351,21 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                 </FormItem>
               )}
             />
+          </FormSection>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isPending}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending && <Loader2 className="size-4 animate-spin" />}
-                {isEditing ? "Save changes" : "Create customer"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          <div className="flex items-center justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => navigate(LIST_PATH)} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending && <Loader2 className="size-4 animate-spin" />}
+              {isEditing ? "Save changes" : "Create customer"}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   )
 }
+
+export default CustomerFormPage

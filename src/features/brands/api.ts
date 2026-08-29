@@ -28,6 +28,21 @@ export function useBrands(search: string) {
   })
 }
 
+async function fetchBrand(id: number): Promise<Brand> {
+  const { data, error } = await supabase.from("brands").select("*").eq("id", id).single()
+  if (error) throw error
+  return data as Brand
+}
+
+/** Single-record fetch for the full-page edit form. */
+export function useBrand(id: number | undefined) {
+  return useQuery({
+    queryKey: [...QUERY_KEY, "detail", id],
+    queryFn: () => fetchBrand(id as number),
+    enabled: id != null,
+  })
+}
+
 export function useCreateBrand() {
   const queryClient = useQueryClient()
   return useMutation({

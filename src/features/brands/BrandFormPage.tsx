@@ -2,18 +2,14 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
+import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
+import { FormPageHeader } from "@/components/data/FormPageHeader"
+import { FormSection } from "@/components/data/FormSection"
+import { PageSpinner } from "@/components/data/PageSpinner"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   Form,
   FormControl,
@@ -24,9 +20,8 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { useCreateBrand, useUpdateBrand } from "@/features/brands/api"
+import { useBrand, useCreateBrand, useUpdateBrand } from "@/features/brands/api"
 import { brandSchema, type BrandFormValues } from "@/features/brands/schemas"
-import type { Brand } from "@/features/brands/types"
 import { slugify } from "@/lib/slugify"
 import { parseSupabaseError } from "@/lib/supabase-errors"
 
@@ -37,17 +32,21 @@ const DEFAULT_VALUES: BrandFormValues = {
   is_active: true,
 }
 
-interface BrandFormDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  brand: Brand | null
-}
+const LIST_PATH = "/master/brands"
 
-export function BrandFormDialog({ open, onOpenChange, brand }: BrandFormDialogProps) {
-  const isEditing = brand != null
+/** Full-page create/edit form for brands (dedicated route, not a modal). */
+export function BrandFormPage() {
+  const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
+  const brandId = id ? Number(id) : undefined
+  const isEditing = brandId != null
+
+  const brandQuery = useBrand(brandId)
   const createBrand = useCreateBrand()
   const updateBrand = useUpdateBrand()
   const isPending = createBrand.isPending || updateBrand.isPending
+
+  const brand = brandQuery.data
 
   const form = useForm<BrandFormValues>({
     resolver: zodResolver(brandSchema),
@@ -55,19 +54,15 @@ export function BrandFormDialog({ open, onOpenChange, brand }: BrandFormDialogPr
   })
 
   useEffect(() => {
-    if (open) {
-      form.reset(
-        brand
-          ? {
-              name: brand.name,
-              slug: brand.slug,
-              description: brand.description ?? "",
-              is_active: brand.is_active,
-            }
-          : DEFAULT_VALUES,
-      )
+    if (brand) {
+      form.reset({
+        name: brand.name,
+        slug: brand.slug,
+        description: brand.description ?? "",
+        is_active: brand.is_active,
+      })
     }
-  }, [open, brand, form])
+  }, [brand, form])
 
   function handleNameChange(name: string) {
     form.setValue("name", name)
@@ -85,14 +80,14 @@ export function BrandFormDialog({ open, onOpenChange, brand }: BrandFormDialogPr
       is_active: values.is_active,
     }
     try {
-      if (isEditing) {
+      if (isEditing && brand) {
         await updateBrand.mutateAsync({ id: brand.id, input })
         toast.success("Brand updated.")
       } else {
         await createBrand.mutateAsync(input)
         toast.success("Brand created.")
       }
-      onOpenChange(false)
+      navigate(LIST_PATH)
     } catch (err) {
       const { message, fieldErrors } = parseSupabaseError(err as Error)
       for (const [field, msg] of Object.entries(fieldErrors)) {
@@ -106,20 +101,26 @@ export function BrandFormDialog({ open, onOpenChange, brand }: BrandFormDialogPr
     }
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit brand" : "Create brand"}</DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? "Change the name, slug, or active status for this brand."
-              : "Add a new brand. Slug is auto-generated from the name."}
-          </DialogDescription>
-        </DialogHeader>
+  if (isEditing && brandQuery.isLoading) {
+    return <PageSpinner label="Loading brand…" />
+  }
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-4">
+  return (
+    <div>
+      <FormPageHeader
+        backTo={LIST_PATH}
+        backLabel="Back to brands"
+        title={isEditing ? `Update brand: ${brand?.name || "—"}` : "Create brand"}
+        subtitle={
+          isEditing
+            ? "Change the name, slug, or active status for this brand."
+            : "Add a new brand. Slug is auto-generated from the name."
+        }
+      />
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-6">
+          <FormSection title="Brand details">
             <FormField
               control={form.control}
               name="name"
@@ -180,24 +181,21 @@ export function BrandFormDialog({ open, onOpenChange, brand }: BrandFormDialogPr
                 </FormItem>
               )}
             />
+          </FormSection>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isPending}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending && <Loader2 className="size-4 animate-spin" />}
-                {isEditing ? "Save changes" : "Create brand"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          <div className="flex items-center justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => navigate(LIST_PATH)} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending && <Loader2 className="size-4 animate-spin" />}
+              {isEditing ? "Save changes" : "Create brand"}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   )
 }
+
+export default BrandFormPage

@@ -2,18 +2,14 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
+import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
+import { FormPageHeader } from "@/components/data/FormPageHeader"
+import { FormSection } from "@/components/data/FormSection"
+import { PageSpinner } from "@/components/data/PageSpinner"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   Form,
   FormControl,
@@ -23,9 +19,8 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { useCreateUnit, useUpdateUnit } from "@/features/units/api"
+import { useCreateUnit, useUnit, useUpdateUnit } from "@/features/units/api"
 import { unitSchema, type UnitFormValues } from "@/features/units/schemas"
-import type { Unit } from "@/features/units/types"
 import { parseSupabaseError } from "@/lib/supabase-errors"
 
 const DEFAULT_VALUES: UnitFormValues = {
@@ -35,17 +30,21 @@ const DEFAULT_VALUES: UnitFormValues = {
   conversion_factor_to_base: 1,
 }
 
-interface UnitFormDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  unit: Unit | null
-}
+const LIST_PATH = "/units"
 
-export function UnitFormDialog({ open, onOpenChange, unit }: UnitFormDialogProps) {
-  const isEditing = unit != null
+/** Full-page create/edit form for units of measure (dedicated route, not a modal). */
+export function UnitFormPage() {
+  const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
+  const unitId = id ? Number(id) : undefined
+  const isEditing = unitId != null
+
+  const unitQuery = useUnit(unitId)
   const createUnit = useCreateUnit()
   const updateUnit = useUpdateUnit()
   const isPending = createUnit.isPending || updateUnit.isPending
+
+  const unit = unitQuery.data
 
   const form = useForm<UnitFormValues>({
     resolver: zodResolver(unitSchema),
@@ -55,19 +54,15 @@ export function UnitFormDialog({ open, onOpenChange, unit }: UnitFormDialogProps
   const isBase = form.watch("base")
 
   useEffect(() => {
-    if (open) {
-      form.reset(
-        unit
-          ? {
-              name: unit.name,
-              short_code: unit.short_code,
-              base: unit.base,
-              conversion_factor_to_base: unit.conversion_factor_to_base,
-            }
-          : DEFAULT_VALUES,
-      )
+    if (unit) {
+      form.reset({
+        name: unit.name,
+        short_code: unit.short_code,
+        base: unit.base,
+        conversion_factor_to_base: unit.conversion_factor_to_base,
+      })
     }
-  }, [open, unit, form])
+  }, [unit, form])
 
   async function onSubmit(values: UnitFormValues) {
     const input = {
@@ -77,14 +72,14 @@ export function UnitFormDialog({ open, onOpenChange, unit }: UnitFormDialogProps
       conversion_factor_to_base: values.base ? 1 : Number(values.conversion_factor_to_base),
     }
     try {
-      if (isEditing) {
+      if (isEditing && unit) {
         await updateUnit.mutateAsync({ id: unit.id, input })
         toast.success("Unit updated.")
       } else {
         await createUnit.mutateAsync(input)
         toast.success("Unit created.")
       }
-      onOpenChange(false)
+      navigate(LIST_PATH)
     } catch (err) {
       const { message, fieldErrors } = parseSupabaseError(err as Error)
       for (const [field, msg] of Object.entries(fieldErrors)) {
@@ -98,20 +93,26 @@ export function UnitFormDialog({ open, onOpenChange, unit }: UnitFormDialogProps
     }
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit unit" : "Create unit of measure"}</DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? "Change the name, short code, or conversion factor for this unit."
-              : "Add a new unit. Mark it as base if it is the reference unit for stock calculations."}
-          </DialogDescription>
-        </DialogHeader>
+  if (isEditing && unitQuery.isLoading) {
+    return <PageSpinner label="Loading unit…" />
+  }
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-4">
+  return (
+    <div>
+      <FormPageHeader
+        backTo={LIST_PATH}
+        backLabel="Back to units"
+        title={isEditing ? `Update unit: ${unit?.name || "—"}` : "Create unit of measure"}
+        subtitle={
+          isEditing
+            ? "Change the name, short code, or conversion factor for this unit."
+            : "Add a new unit. Mark it as base if it is the reference unit for stock calculations."
+        }
+      />
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-6">
+          <FormSection title="Unit details">
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -175,24 +176,21 @@ export function UnitFormDialog({ open, onOpenChange, unit }: UnitFormDialogProps
                 </FormItem>
               )}
             />
+          </FormSection>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isPending}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending && <Loader2 className="size-4 animate-spin" />}
-                {isEditing ? "Save changes" : "Create unit"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          <div className="flex items-center justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => navigate(LIST_PATH)} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending && <Loader2 className="size-4 animate-spin" />}
+              {isEditing ? "Save changes" : "Create unit"}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   )
 }
+
+export default UnitFormPage

@@ -2,18 +2,14 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
+import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
+import { FormPageHeader } from "@/components/data/FormPageHeader"
+import { FormSection } from "@/components/data/FormSection"
+import { PageSpinner } from "@/components/data/PageSpinner"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   Form,
   FormControl,
@@ -31,9 +27,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { useAllCategories, useCreateCategory, useUpdateCategory } from "@/features/categories/api"
+import {
+  useAllCategories,
+  useCategory,
+  useCreateCategory,
+  useUpdateCategory,
+} from "@/features/categories/api"
 import { categorySchema, type CategoryFormValues } from "@/features/categories/schemas"
-import type { CategoryWithParent } from "@/features/categories/types"
 import { slugify } from "@/lib/slugify"
 import { parseSupabaseError } from "@/lib/supabase-errors"
 
@@ -45,18 +45,27 @@ const DEFAULT_VALUES: CategoryFormValues = {
   is_active: true,
 }
 
-interface CategoryFormDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  category: CategoryWithParent | null
-}
+const LIST_PATH = "/master/categories"
 
-export function CategoryFormDialog({ open, onOpenChange, category }: CategoryFormDialogProps) {
-  const isEditing = category != null
+/**
+ * Full-page create/edit form for categories, mirroring
+ * legacy-php-vue/resources/js/pages/master/CategoryForm.vue — a dedicated
+ * route (`/master/categories/new` or `/master/categories/:id/edit`) rather
+ * than a modal dialog.
+ */
+export function CategoryFormPage() {
+  const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
+  const categoryId = id ? Number(id) : undefined
+  const isEditing = categoryId != null
+
+  const categoryQuery = useCategory(categoryId)
   const allCategories = useAllCategories()
   const createCategory = useCreateCategory()
   const updateCategory = useUpdateCategory()
   const isPending = createCategory.isPending || updateCategory.isPending
+
+  const category = categoryQuery.data
 
   const form = useForm<CategoryFormValues>({
     resolver: zodResolver(categorySchema),
@@ -64,20 +73,16 @@ export function CategoryFormDialog({ open, onOpenChange, category }: CategoryFor
   })
 
   useEffect(() => {
-    if (open) {
-      form.reset(
-        category
-          ? {
-              name: category.name,
-              slug: category.slug,
-              description: category.description ?? "",
-              parent_id: category.parent_id,
-              is_active: category.is_active,
-            }
-          : DEFAULT_VALUES,
-      )
+    if (category) {
+      form.reset({
+        name: category.name,
+        slug: category.slug,
+        description: category.description ?? "",
+        parent_id: category.parent_id,
+        is_active: category.is_active,
+      })
     }
-  }, [open, category, form])
+  }, [category, form])
 
   function handleNameChange(name: string) {
     form.setValue("name", name)
@@ -95,14 +100,14 @@ export function CategoryFormDialog({ open, onOpenChange, category }: CategoryFor
       is_active: values.is_active,
     }
     try {
-      if (isEditing) {
+      if (isEditing && category) {
         await updateCategory.mutateAsync({ id: category.id, input })
         toast.success("Category updated.")
       } else {
         await createCategory.mutateAsync(input)
         toast.success("Category created.")
       }
-      onOpenChange(false)
+      navigate(LIST_PATH)
     } catch (err) {
       const { message, fieldErrors } = parseSupabaseError(err as Error)
       for (const [field, msg] of Object.entries(fieldErrors)) {
@@ -116,22 +121,28 @@ export function CategoryFormDialog({ open, onOpenChange, category }: CategoryFor
     }
   }
 
-  const availableParents = (allCategories.data ?? []).filter((c) => c.id !== category?.id)
+  if (isEditing && categoryQuery.isLoading) {
+    return <PageSpinner label="Loading category…" />
+  }
+
+  const availableParents = (allCategories.data ?? []).filter((c) => c.id !== categoryId)
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit category" : "Create category"}</DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? "Change the name, slug, parent, or active status for this category."
-              : "Add a new category to organize your products. Slug is auto-generated from the name."}
-          </DialogDescription>
-        </DialogHeader>
+    <div>
+      <FormPageHeader
+        backTo={LIST_PATH}
+        backLabel="Back to categories"
+        title={isEditing ? `Update category: ${category?.name || "—"}` : "Create product category"}
+        subtitle={
+          isEditing
+            ? "Change the name, slug, parent, or active status for this category."
+            : "Add a new category to organize your products. Slug is auto-generated from the name."
+        }
+      />
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-4">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-6">
+          <FormSection title="Category details">
             <FormField
               control={form.control}
               name="name"
@@ -159,6 +170,9 @@ export function CategoryFormDialog({ open, onOpenChange, category }: CategoryFor
                   <FormControl>
                     <Input {...field} placeholder="e.g. beverages" />
                   </FormControl>
+                  <p className="text-xs text-slate-400">
+                    URL-friendly identifier (auto-generated from the name)
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -206,6 +220,9 @@ export function CategoryFormDialog({ open, onOpenChange, category }: CategoryFor
                       </SelectContent>
                     </Select>
                   </FormControl>
+                  <p className="text-xs text-slate-400">
+                    Make this a sub-category of another category.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -225,24 +242,21 @@ export function CategoryFormDialog({ open, onOpenChange, category }: CategoryFor
                 </FormItem>
               )}
             />
+          </FormSection>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isPending}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending && <Loader2 className="size-4 animate-spin" />}
-                {isEditing ? "Save changes" : "Create category"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          <div className="flex items-center justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => navigate(LIST_PATH)} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending && <Loader2 className="size-4 animate-spin" />}
+              {isEditing ? "Save changes" : "Create category"}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   )
 }
+
+export default CategoryFormPage

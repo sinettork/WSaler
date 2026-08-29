@@ -2,19 +2,15 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
+import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
 import { AddressCascader, EMPTY_ADDRESS, type AddressValue } from "@/components/data/AddressCascader"
+import { FormPageHeader } from "@/components/data/FormPageHeader"
+import { FormSection } from "@/components/data/FormSection"
+import { PageSpinner } from "@/components/data/PageSpinner"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   Form,
   FormControl,
@@ -24,9 +20,8 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { useCreateWarehouse, useUpdateWarehouse } from "@/features/warehouses/api"
+import { useCreateWarehouse, useUpdateWarehouse, useWarehouse } from "@/features/warehouses/api"
 import { warehouseSchema, type WarehouseFormValues } from "@/features/warehouses/schemas"
-import type { Warehouse } from "@/features/warehouses/types"
 import { parseSupabaseError } from "@/lib/supabase-errors"
 
 const DEFAULT_VALUES: WarehouseFormValues = {
@@ -42,25 +37,29 @@ const DEFAULT_VALUES: WarehouseFormValues = {
   is_active: true,
 }
 
-interface WarehouseFormDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  warehouse: Warehouse | null
-}
+const LIST_PATH = "/warehouses"
 
 /**
- * Create/edit dialog for warehouses. Holds the Cambodia address selection as
- * a nested `AddressValue` object (via `AddressCascader`) and flattens it into
- * the top-level province/district/commune/village FK fields on submit,
+ * Full-page create/edit form for warehouses (dedicated route, not a modal),
  * mirroring legacy-php-vue/resources/js/pages/master/WarehouseForm.vue.
- * `code` is left blank on create so the server-side-equivalent
- * `nextWarehouseCode()` helper in `api.ts` can auto-assign a `WH-XXX` code.
+ * Holds the Cambodia address selection as a nested `AddressValue` object
+ * (via `AddressCascader`) and flattens it into the top-level
+ * province/district/commune/village FK fields on submit. `code` is left
+ * blank on create so the server-side-equivalent `nextWarehouseCode()`
+ * helper in `api.ts` can auto-assign a `WH-XXX` code.
  */
-export function WarehouseFormDialog({ open, onOpenChange, warehouse }: WarehouseFormDialogProps) {
-  const isEditing = warehouse != null
+export function WarehouseFormPage() {
+  const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
+  const warehouseId = id ? Number(id) : undefined
+  const isEditing = warehouseId != null
+
+  const warehouseQuery = useWarehouse(warehouseId)
   const createWarehouse = useCreateWarehouse()
   const updateWarehouse = useUpdateWarehouse()
   const isPending = createWarehouse.isPending || updateWarehouse.isPending
+
+  const warehouse = warehouseQuery.data
 
   const [address, setAddress] = useState<AddressValue>(EMPTY_ADDRESS)
 
@@ -70,33 +69,28 @@ export function WarehouseFormDialog({ open, onOpenChange, warehouse }: Warehouse
   })
 
   useEffect(() => {
-    if (open) {
-      if (warehouse) {
-        form.reset({
-          name: warehouse.name,
-          code: warehouse.code,
-          province_id: warehouse.province_id,
-          district_id: warehouse.district_id,
-          commune_id: warehouse.commune_id,
-          village_id: warehouse.village_id,
-          address: warehouse.address ?? "",
-          phone: warehouse.phone ?? "",
-          is_default: warehouse.is_default,
-          is_active: warehouse.is_active,
-        })
-        setAddress({
-          province_id: warehouse.province_id,
-          district_id: warehouse.district_id,
-          commune_id: warehouse.commune_id,
-          village_id: warehouse.village_id,
-          address: warehouse.address ?? "",
-        })
-      } else {
-        form.reset(DEFAULT_VALUES)
-        setAddress(EMPTY_ADDRESS)
-      }
+    if (warehouse) {
+      form.reset({
+        name: warehouse.name,
+        code: warehouse.code,
+        province_id: warehouse.province_id,
+        district_id: warehouse.district_id,
+        commune_id: warehouse.commune_id,
+        village_id: warehouse.village_id,
+        address: warehouse.address ?? "",
+        phone: warehouse.phone ?? "",
+        is_default: warehouse.is_default,
+        is_active: warehouse.is_active,
+      })
+      setAddress({
+        province_id: warehouse.province_id,
+        district_id: warehouse.district_id,
+        commune_id: warehouse.commune_id,
+        village_id: warehouse.village_id,
+        address: warehouse.address ?? "",
+      })
     }
-  }, [open, warehouse, form])
+  }, [warehouse, form])
 
   function handleAddressChange(next: AddressValue) {
     setAddress(next)
@@ -121,14 +115,14 @@ export function WarehouseFormDialog({ open, onOpenChange, warehouse }: Warehouse
       is_active: values.is_active,
     }
     try {
-      if (isEditing) {
+      if (isEditing && warehouse) {
         await updateWarehouse.mutateAsync({ id: warehouse.id, input })
         toast.success("Warehouse updated.")
       } else {
         await createWarehouse.mutateAsync(input)
         toast.success("Warehouse created.")
       }
-      onOpenChange(false)
+      navigate(LIST_PATH)
     } catch (err) {
       const { message, fieldErrors } = parseSupabaseError(err as Error)
       for (const [field, msg] of Object.entries(fieldErrors)) {
@@ -142,20 +136,26 @@ export function WarehouseFormDialog({ open, onOpenChange, warehouse }: Warehouse
     }
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit warehouse" : "Create warehouse"}</DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? "Update this warehouse or branch's details and address."
-              : "Add a new warehouse or branch location. A code will be auto-assigned if left blank."}
-          </DialogDescription>
-        </DialogHeader>
+  if (isEditing && warehouseQuery.isLoading) {
+    return <PageSpinner label="Loading warehouse…" />
+  }
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-4">
+  return (
+    <div>
+      <FormPageHeader
+        backTo={LIST_PATH}
+        backLabel="Back to warehouses"
+        title={isEditing ? `Update warehouse: ${warehouse?.name || "—"}` : "Create warehouse"}
+        subtitle={
+          isEditing
+            ? "Update this warehouse or branch's details and address."
+            : "Add a new warehouse or branch location. A code will be auto-assigned if left blank."
+        }
+      />
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-6">
+          <FormSection title="Warehouse details">
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -198,17 +198,19 @@ export function WarehouseFormDialog({ open, onOpenChange, warehouse }: Warehouse
                 </FormItem>
               )}
             />
+          </FormSection>
 
-            <div className="border-t border-slate-100 pt-4">
-              <AddressCascader
-                value={address}
-                onChange={handleAddressChange}
-                required={{ province: false, district: false }}
-                addressPlaceholder="Street, house number, landmark"
-              />
-            </div>
+          <FormSection title="Address">
+            <AddressCascader
+              value={address}
+              onChange={handleAddressChange}
+              required={{ province: false, district: false }}
+              addressPlaceholder="Street, house number, landmark"
+            />
+          </FormSection>
 
-            <div className="flex flex-col gap-3 border-t border-slate-100 pt-4">
+          <FormSection title="Status">
+            <div className="flex flex-col gap-3">
               <FormField
                 control={form.control}
                 name="is_default"
@@ -236,24 +238,21 @@ export function WarehouseFormDialog({ open, onOpenChange, warehouse }: Warehouse
                 )}
               />
             </div>
+          </FormSection>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isPending}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending && <Loader2 className="size-4 animate-spin" />}
-                {isEditing ? "Save changes" : "Create warehouse"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          <div className="flex items-center justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => navigate(LIST_PATH)} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending && <Loader2 className="size-4 animate-spin" />}
+              {isEditing ? "Save changes" : "Create warehouse"}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   )
 }
+
+export default WarehouseFormPage

@@ -10,11 +10,17 @@ import { DashboardPage } from "@/features/dashboard/DashboardPage"
 import { LoginPage } from "@/features/auth/LoginPage"
 import { RegisterPage } from "@/features/auth/RegisterPage"
 import { CategoriesPage } from "@/features/categories/CategoriesPage"
+import { CategoryFormPage } from "@/features/categories/CategoryFormPage"
 import { BrandsPage } from "@/features/brands/BrandsPage"
+import { BrandFormPage } from "@/features/brands/BrandFormPage"
 import { UnitsPage } from "@/features/units/UnitsPage"
+import { UnitFormPage } from "@/features/units/UnitFormPage"
 import { WarehousesPage } from "@/features/warehouses/WarehousesPage"
+import { WarehouseFormPage } from "@/features/warehouses/WarehouseFormPage"
 import { SuppliersPage } from "@/features/suppliers/SuppliersPage"
+import { SupplierFormPage } from "@/features/suppliers/SupplierFormPage"
 import { CustomersPage } from "@/features/customers/CustomersPage"
+import { CustomerFormPage } from "@/features/customers/CustomerFormPage"
 
 // Route table mirrors legacy-php-vue/resources/js/router/index.js.
 // Modules not yet ported to React render ComingSoonPage at their real path
@@ -49,10 +55,18 @@ function App() {
 
           {/* Master data */}
           <Route path="master/categories" element={<CategoriesPage />} />
+          <Route path="master/categories/new" element={<CategoryFormPage />} />
+          <Route path="master/categories/:id/edit" element={<CategoryFormPage />} />
           <Route path="master/brands" element={<BrandsPage />} />
+          <Route path="master/brands/new" element={<BrandFormPage />} />
+          <Route path="master/brands/:id/edit" element={<BrandFormPage />} />
           <Route path="master/customers" element={<CustomersPage />} />
+          <Route path="master/customers/new" element={<CustomerFormPage />} />
+          <Route path="master/customers/:id/edit" element={<CustomerFormPage />} />
           <Route element={<RequireRole roles={["admin", "manager", "purchasing"]} />}>
             <Route path="master/suppliers" element={<SuppliersPage />} />
+            <Route path="master/suppliers/new" element={<SupplierFormPage />} />
+            <Route path="master/suppliers/:id/edit" element={<SupplierFormPage />} />
           </Route>
 
           {/* Products */}
@@ -63,7 +77,11 @@ function App() {
 
           <Route element={<RequireRole roles={["admin", "manager"]} />}>
             <Route path="units" element={<UnitsPage />} />
+            <Route path="units/new" element={<UnitFormPage />} />
+            <Route path="units/:id/edit" element={<UnitFormPage />} />
             <Route path="warehouses" element={<WarehousesPage />} />
+            <Route path="warehouses/new" element={<WarehouseFormPage />} />
+            <Route path="warehouses/:id/edit" element={<WarehouseFormPage />} />
             <Route path="settings/app" element={<ComingSoonPage titleKey="nav.appSettings" />} />
           </Route>
 

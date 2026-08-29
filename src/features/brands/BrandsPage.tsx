@@ -1,5 +1,6 @@
 import { Boxes, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 
 import { ConfirmDeleteDialog } from "@/components/data/ConfirmDeleteDialog"
@@ -18,33 +19,21 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useBrands, useDeleteBrand } from "@/features/brands/api"
-import { BrandFormDialog } from "@/features/brands/BrandFormDialog"
 import type { Brand } from "@/features/brands/types"
 import { useAuth } from "@/hooks/useAuth"
 import { parseSupabaseError } from "@/lib/supabase-errors"
 
 export function BrandsPage() {
+  const navigate = useNavigate()
   const { hasPermission } = useAuth()
   const canWrite = hasPermission(["create products", "edit products"])
   const canDelete = hasPermission("delete products")
 
   const [search, setSearch] = useState("")
-  const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState<Brand | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Brand | null>(null)
 
   const brands = useBrands(search)
   const deleteBrand = useDeleteBrand()
-
-  function openCreate() {
-    setEditing(null)
-    setFormOpen(true)
-  }
-
-  function openEdit(brand: Brand) {
-    setEditing(brand)
-    setFormOpen(true)
-  }
 
   async function performDelete() {
     if (!deleteTarget) return
@@ -67,7 +56,7 @@ export function BrandsPage() {
         subtitle="Manage product brands."
         actions={
           canWrite ? (
-            <Button onClick={openCreate}>
+            <Button onClick={() => navigate("/master/brands/new")}>
               <Plus className="size-4" />
               Add Brand
             </Button>
@@ -88,7 +77,7 @@ export function BrandsPage() {
           }
           action={
             !search && canWrite ? (
-              <Button onClick={openCreate}>
+              <Button onClick={() => navigate("/master/brands/new")}>
                 <Plus className="size-4" />
                 Add Brand
               </Button>
@@ -125,7 +114,7 @@ export function BrandsPage() {
                               size="icon-sm"
                               variant="ghost"
                               aria-label="Edit"
-                              onClick={() => openEdit(brand)}
+                              onClick={() => navigate(`/master/brands/${brand.id}/edit`)}
                             >
                               <Pencil className="size-4" />
                             </Button>
@@ -150,8 +139,6 @@ export function BrandsPage() {
           </Table>
         </div>
       )}
-
-      <BrandFormDialog open={formOpen} onOpenChange={setFormOpen} brand={editing} />
 
       <ConfirmDeleteDialog
         open={deleteTarget != null}

@@ -1,5 +1,6 @@
 import { Lock, Pencil, Plus, Trash2, Users } from "lucide-react"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 
 import { ConfirmDeleteDialog } from "@/components/data/ConfirmDeleteDialog"
@@ -18,7 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { CustomerFormDialog } from "@/features/customers/CustomerFormDialog"
 import { useCustomers, useDeleteCustomer } from "@/features/customers/api"
 import type { CustomerWithAddress } from "@/features/customers/types"
 import { useAuth } from "@/hooks/useAuth"
@@ -41,28 +41,17 @@ function formatAddress(row: CustomerWithAddress): string {
  * "read all authenticated") — see supabase/migrations/0009_rls_policies.sql.
  */
 export function CustomersPage() {
+  const navigate = useNavigate()
   const { hasPermission } = useAuth()
   const canRead = hasPermission("view customers")
   const canWrite = hasPermission(["create customers", "edit customers"])
   const canDelete = hasPermission("delete customers")
 
   const [search, setSearch] = useState("")
-  const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState<CustomerWithAddress | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<CustomerWithAddress | null>(null)
 
   const customers = useCustomers(search, canRead)
   const deleteCustomer = useDeleteCustomer()
-
-  function openCreate() {
-    setEditing(null)
-    setFormOpen(true)
-  }
-
-  function openEdit(customer: CustomerWithAddress) {
-    setEditing(customer)
-    setFormOpen(true)
-  }
 
   async function performDelete() {
     if (!deleteTarget) return
@@ -98,7 +87,7 @@ export function CustomersPage() {
         subtitle="Manage your customer directory."
         actions={
           canWrite ? (
-            <Button onClick={openCreate}>
+            <Button onClick={() => navigate("/master/customers/new")}>
               <Plus className="size-4" />
               Add Customer
             </Button>
@@ -121,7 +110,7 @@ export function CustomersPage() {
           }
           action={
             !search && canWrite ? (
-              <Button onClick={openCreate}>
+              <Button onClick={() => navigate("/master/customers/new")}>
                 <Plus className="size-4" />
                 Add Customer
               </Button>
@@ -175,7 +164,7 @@ export function CustomersPage() {
                               size="icon-sm"
                               variant="ghost"
                               aria-label="Edit"
-                              onClick={() => openEdit(customer)}
+                              onClick={() => navigate(`/master/customers/${customer.id}/edit`)}
                             >
                               <Pencil className="size-4" />
                             </Button>
@@ -200,8 +189,6 @@ export function CustomersPage() {
           </Table>
         </div>
       )}
-
-      <CustomerFormDialog open={formOpen} onOpenChange={setFormOpen} customer={editing} />
 
       <ConfirmDeleteDialog
         open={deleteTarget != null}

@@ -25,6 +25,24 @@ async function fetchSuppliers(search: string): Promise<SupplierWithAddress[]> {
   return data as unknown as SupplierWithAddress[]
 }
 
+async function fetchSupplier(id: number): Promise<SupplierWithAddress> {
+  const { data, error } = await supabase
+    .from("suppliers")
+    .select(SELECT_WITH_ADDRESS)
+    .eq("id", id)
+    .single()
+  if (error) throw error
+  return data as unknown as SupplierWithAddress
+}
+
+export function useSupplier(id: number | undefined) {
+  return useQuery({
+    queryKey: [...QUERY_KEY, "detail", id],
+    queryFn: () => fetchSupplier(id as number),
+    enabled: id != null,
+  })
+}
+
 export function useSuppliers(search: string, enabled = true) {
   return useQuery({
     queryKey: [...QUERY_KEY, search],

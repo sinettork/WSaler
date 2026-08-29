@@ -28,6 +28,24 @@ async function fetchCustomers(search: string): Promise<CustomerWithAddress[]> {
   return data as unknown as CustomerWithAddress[]
 }
 
+async function fetchCustomer(id: number): Promise<CustomerWithAddress> {
+  const { data, error } = await supabase
+    .from("customers")
+    .select(SELECT_WITH_ADDRESS)
+    .eq("id", id)
+    .single()
+  if (error) throw error
+  return data as unknown as CustomerWithAddress
+}
+
+export function useCustomer(id: number | undefined) {
+  return useQuery({
+    queryKey: [...QUERY_KEY, "detail", id],
+    queryFn: () => fetchCustomer(id as number),
+    enabled: id != null,
+  })
+}
+
 /** Mirrors legacy CustomerController::store(): 'CUST-' + zero-padded(max(id)+1, 5). */
 async function nextCustomerCode(): Promise<string> {
   const { data, error } = await supabase

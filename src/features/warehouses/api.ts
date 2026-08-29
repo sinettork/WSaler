@@ -21,6 +21,20 @@ async function fetchWarehouses(search: string): Promise<Warehouse[]> {
   return data as Warehouse[]
 }
 
+async function fetchWarehouse(id: number): Promise<Warehouse> {
+  const { data, error } = await supabase.from("warehouses").select("*").eq("id", id).single()
+  if (error) throw error
+  return data as Warehouse
+}
+
+export function useWarehouse(id: number | undefined) {
+  return useQuery({
+    queryKey: [...QUERY_KEY, "detail", id],
+    queryFn: () => fetchWarehouse(id as number),
+    enabled: id != null,
+  })
+}
+
 async function nextWarehouseCode(): Promise<string> {
   const { count, error } = await supabase
     .from("warehouses")

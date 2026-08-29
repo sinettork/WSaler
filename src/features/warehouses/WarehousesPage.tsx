@@ -1,5 +1,6 @@
 import { Pencil, Plus, Star, Trash2, Warehouse as WarehouseIcon } from "lucide-react"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 
 import { ConfirmDeleteDialog } from "@/components/data/ConfirmDeleteDialog"
@@ -19,7 +20,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useDeleteWarehouse, useWarehouses } from "@/features/warehouses/api"
-import { WarehouseFormDialog } from "@/features/warehouses/WarehouseFormDialog"
 import type { Warehouse } from "@/features/warehouses/types"
 import { useAuth } from "@/hooks/useAuth"
 import { parseSupabaseError } from "@/lib/supabase-errors"
@@ -31,27 +31,16 @@ import { parseSupabaseError } from "@/lib/supabase-errors"
  * not "products".
  */
 export function WarehousesPage() {
+  const navigate = useNavigate()
   const { hasPermission } = useAuth()
   const canWrite = hasPermission(["create warehouses", "edit warehouses"])
   const canDelete = hasPermission("delete warehouses")
 
   const [search, setSearch] = useState("")
-  const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState<Warehouse | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Warehouse | null>(null)
 
   const warehouses = useWarehouses(search)
   const deleteWarehouse = useDeleteWarehouse()
-
-  function openCreate() {
-    setEditing(null)
-    setFormOpen(true)
-  }
-
-  function openEdit(warehouse: Warehouse) {
-    setEditing(warehouse)
-    setFormOpen(true)
-  }
 
   async function performDelete() {
     if (!deleteTarget) return
@@ -74,7 +63,7 @@ export function WarehousesPage() {
         subtitle="Manage warehouse and branch locations used for stock and sales."
         actions={
           canWrite ? (
-            <Button onClick={openCreate}>
+            <Button onClick={() => navigate("/warehouses/new")}>
               <Plus className="size-4" />
               Add Warehouse
             </Button>
@@ -97,7 +86,7 @@ export function WarehousesPage() {
           }
           action={
             !search && canWrite ? (
-              <Button onClick={openCreate}>
+              <Button onClick={() => navigate("/warehouses/new")}>
                 <Plus className="size-4" />
                 Add Warehouse
               </Button>
@@ -147,7 +136,7 @@ export function WarehousesPage() {
                               size="icon-sm"
                               variant="ghost"
                               aria-label="Edit"
-                              onClick={() => openEdit(warehouse)}
+                              onClick={() => navigate(`/warehouses/${warehouse.id}/edit`)}
                             >
                               <Pencil className="size-4" />
                             </Button>
@@ -172,8 +161,6 @@ export function WarehousesPage() {
           </Table>
         </div>
       )}
-
-      <WarehouseFormDialog open={formOpen} onOpenChange={setFormOpen} warehouse={editing} />
 
       <ConfirmDeleteDialog
         open={deleteTarget != null}

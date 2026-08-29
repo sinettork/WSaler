@@ -36,6 +36,25 @@ export function useAllCategories() {
   })
 }
 
+async function fetchCategory(id: number): Promise<CategoryWithParent> {
+  const { data, error } = await supabase
+    .from("categories")
+    .select("*, parent:parent_id(id, name)")
+    .eq("id", id)
+    .single()
+  if (error) throw error
+  return data as unknown as CategoryWithParent
+}
+
+/** Single-record fetch for the full-page edit form. */
+export function useCategory(id: number | undefined) {
+  return useQuery({
+    queryKey: [...QUERY_KEY, "detail", id],
+    queryFn: () => fetchCategory(id as number),
+    enabled: id != null,
+  })
+}
+
 export function useCreateCategory() {
   const queryClient = useQueryClient()
   return useMutation({

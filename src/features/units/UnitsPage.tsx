@@ -1,5 +1,6 @@
 import { Pencil, Plus, Scale, Trash2 } from "lucide-react"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 
 import { ConfirmDeleteDialog } from "@/components/data/ConfirmDeleteDialog"
@@ -19,32 +20,20 @@ import {
 } from "@/components/ui/table"
 import { useAuth } from "@/hooks/useAuth"
 import { useDeleteUnit, useUnits } from "@/features/units/api"
-import { UnitFormDialog } from "@/features/units/UnitFormDialog"
 import type { Unit } from "@/features/units/types"
 import { parseSupabaseError } from "@/lib/supabase-errors"
 
 export function UnitsPage() {
+  const navigate = useNavigate()
   const { hasPermission } = useAuth()
   const canWrite = hasPermission(["create products", "edit products"])
   const canDelete = hasPermission("delete products")
 
   const [search, setSearch] = useState("")
-  const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState<Unit | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Unit | null>(null)
 
   const units = useUnits(search)
   const deleteUnit = useDeleteUnit()
-
-  function openCreate() {
-    setEditing(null)
-    setFormOpen(true)
-  }
-
-  function openEdit(unit: Unit) {
-    setEditing(unit)
-    setFormOpen(true)
-  }
 
   async function performDelete() {
     if (!deleteTarget) return
@@ -67,7 +56,7 @@ export function UnitsPage() {
         subtitle="Units of measure used for products and stock quantities."
         actions={
           canWrite ? (
-            <Button onClick={openCreate}>
+            <Button onClick={() => navigate("/units/new")}>
               <Plus className="size-4" />
               Add Unit
             </Button>
@@ -90,7 +79,7 @@ export function UnitsPage() {
           }
           action={
             !search && canWrite ? (
-              <Button onClick={openCreate}>
+              <Button onClick={() => navigate("/units/new")}>
                 <Plus className="size-4" />
                 Add Unit
               </Button>
@@ -137,7 +126,7 @@ export function UnitsPage() {
                               size="icon-sm"
                               variant="ghost"
                               aria-label="Edit"
-                              onClick={() => openEdit(unit)}
+                              onClick={() => navigate(`/units/${unit.id}/edit`)}
                             >
                               <Pencil className="size-4" />
                             </Button>
@@ -162,8 +151,6 @@ export function UnitsPage() {
           </Table>
         </div>
       )}
-
-      <UnitFormDialog open={formOpen} onOpenChange={setFormOpen} unit={editing} />
 
       <ConfirmDeleteDialog
         open={deleteTarget != null}

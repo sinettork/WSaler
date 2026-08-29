@@ -1,5 +1,6 @@
 import { Building2, Lock, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 
 import { ConfirmDeleteDialog } from "@/components/data/ConfirmDeleteDialog"
@@ -18,7 +19,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useDeleteSupplier, useSuppliers } from "@/features/suppliers/api"
-import { SupplierFormDialog } from "@/features/suppliers/SupplierFormDialog"
 import type { SupplierWithAddress } from "@/features/suppliers/types"
 import { useAuth } from "@/hooks/useAuth"
 import { parseSupabaseError } from "@/lib/supabase-errors"
@@ -36,28 +36,17 @@ function formatAddress(row: SupplierWithAddress): string {
  * gate distinct from the write/delete gates.
  */
 export function SuppliersPage() {
+  const navigate = useNavigate()
   const { hasPermission } = useAuth()
   const canRead = hasPermission("view suppliers")
   const canWrite = hasPermission(["create suppliers", "edit suppliers"])
   const canDelete = hasPermission("delete suppliers")
 
   const [search, setSearch] = useState("")
-  const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState<SupplierWithAddress | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<SupplierWithAddress | null>(null)
 
   const suppliers = useSuppliers(search, canRead)
   const deleteSupplier = useDeleteSupplier()
-
-  function openCreate() {
-    setEditing(null)
-    setFormOpen(true)
-  }
-
-  function openEdit(supplier: SupplierWithAddress) {
-    setEditing(supplier)
-    setFormOpen(true)
-  }
 
   async function performDelete() {
     if (!deleteTarget) return
@@ -93,7 +82,7 @@ export function SuppliersPage() {
         subtitle="Manage your supplier directory."
         actions={
           canWrite ? (
-            <Button onClick={openCreate}>
+            <Button onClick={() => navigate("/master/suppliers/new")}>
               <Plus className="size-4" />
               Add Supplier
             </Button>
@@ -116,7 +105,7 @@ export function SuppliersPage() {
           }
           action={
             !search && canWrite ? (
-              <Button onClick={openCreate}>
+              <Button onClick={() => navigate("/master/suppliers/new")}>
                 <Plus className="size-4" />
                 Add Supplier
               </Button>
@@ -161,7 +150,7 @@ export function SuppliersPage() {
                               size="icon-sm"
                               variant="ghost"
                               aria-label="Edit"
-                              onClick={() => openEdit(supplier)}
+                              onClick={() => navigate(`/master/suppliers/${supplier.id}/edit`)}
                             >
                               <Pencil className="size-4" />
                             </Button>
@@ -186,8 +175,6 @@ export function SuppliersPage() {
           </Table>
         </div>
       )}
-
-      <SupplierFormDialog open={formOpen} onOpenChange={setFormOpen} supplier={editing} />
 
       <ConfirmDeleteDialog
         open={deleteTarget != null}

@@ -24,6 +24,21 @@ export function useUnits(search: string) {
   })
 }
 
+async function fetchUnit(id: number): Promise<Unit> {
+  const { data, error } = await supabase.from("units").select("*").eq("id", id).single()
+  if (error) throw error
+  return data as Unit
+}
+
+/** Single-record fetch for the full-page edit form. */
+export function useUnit(id: number | undefined) {
+  return useQuery({
+    queryKey: [...QUERY_KEY, "detail", id],
+    queryFn: () => fetchUnit(id as number),
+    enabled: id != null,
+  })
+}
+
 export function useCreateUnit() {
   const queryClient = useQueryClient()
   return useMutation({

@@ -1,5 +1,6 @@
 import { Pencil, Plus, Tag, Trash2 } from "lucide-react"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 
 import { ConfirmDeleteDialog } from "@/components/data/ConfirmDeleteDialog"
@@ -18,33 +19,21 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useCategories, useDeleteCategory } from "@/features/categories/api"
-import { CategoryFormDialog } from "@/features/categories/CategoryFormDialog"
 import type { CategoryWithParent } from "@/features/categories/types"
 import { useAuth } from "@/hooks/useAuth"
 import { parseSupabaseError } from "@/lib/supabase-errors"
 
 export function CategoriesPage() {
+  const navigate = useNavigate()
   const { hasPermission } = useAuth()
   const canWrite = hasPermission(["create products", "edit products"])
   const canDelete = hasPermission("delete products")
 
   const [search, setSearch] = useState("")
-  const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState<CategoryWithParent | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<CategoryWithParent | null>(null)
 
   const categories = useCategories(search)
   const deleteCategory = useDeleteCategory()
-
-  function openCreate() {
-    setEditing(null)
-    setFormOpen(true)
-  }
-
-  function openEdit(category: CategoryWithParent) {
-    setEditing(category)
-    setFormOpen(true)
-  }
 
   async function performDelete() {
     if (!deleteTarget) return
@@ -67,7 +56,7 @@ export function CategoriesPage() {
         subtitle="Manage product categories."
         actions={
           canWrite ? (
-            <Button onClick={openCreate}>
+            <Button onClick={() => navigate("/master/categories/new")}>
               <Plus className="size-4" />
               Add Category
             </Button>
@@ -90,7 +79,7 @@ export function CategoriesPage() {
           }
           action={
             !search && canWrite ? (
-              <Button onClick={openCreate}>
+              <Button onClick={() => navigate("/master/categories/new")}>
                 <Plus className="size-4" />
                 Add Category
               </Button>
@@ -131,7 +120,7 @@ export function CategoriesPage() {
                               size="icon-sm"
                               variant="ghost"
                               aria-label="Edit"
-                              onClick={() => openEdit(category)}
+                              onClick={() => navigate(`/master/categories/${category.id}/edit`)}
                             >
                               <Pencil className="size-4" />
                             </Button>
@@ -156,8 +145,6 @@ export function CategoriesPage() {
           </Table>
         </div>
       )}
-
-      <CategoryFormDialog open={formOpen} onOpenChange={setFormOpen} category={editing} />
 
       <ConfirmDeleteDialog
         open={deleteTarget != null}
