@@ -1,0 +1,1 @@
+@media print{@page{margin:.5cm}body *{visibility:hidden}.receipt-print,.receipt-print *{visibility:visible}.receipt-print{width:100%;padding:1rem;position:absolute;top:0;left:0;background:#fff!important}aside,header,.app-sidebar,.app-navbar{display:none!important}}
