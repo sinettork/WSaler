@@ -9,6 +9,12 @@ import { NotFoundPage } from "@/components/layout/NotFoundPage"
 import { DashboardPage } from "@/features/dashboard/DashboardPage"
 import { LoginPage } from "@/features/auth/LoginPage"
 import { RegisterPage } from "@/features/auth/RegisterPage"
+import { CategoriesPage } from "@/features/categories/CategoriesPage"
+import { BrandsPage } from "@/features/brands/BrandsPage"
+import { UnitsPage } from "@/features/units/UnitsPage"
+import { WarehousesPage } from "@/features/warehouses/WarehousesPage"
+import { SuppliersPage } from "@/features/suppliers/SuppliersPage"
+import { CustomersPage } from "@/features/customers/CustomersPage"
 
 // Route table mirrors legacy-php-vue/resources/js/router/index.js.
 // Modules not yet ported to React render ComingSoonPage at their real path
@@ -42,11 +48,11 @@ function App() {
           </Route>
 
           {/* Master data */}
-          <Route path="master/categories" element={<ComingSoonPage titleKey="nav.categories" />} />
-          <Route path="master/brands" element={<ComingSoonPage titleKey="nav.brands" />} />
-          <Route path="master/customers" element={<ComingSoonPage titleKey="nav.customers" />} />
+          <Route path="master/categories" element={<CategoriesPage />} />
+          <Route path="master/brands" element={<BrandsPage />} />
+          <Route path="master/customers" element={<CustomersPage />} />
           <Route element={<RequireRole roles={["admin", "manager", "purchasing"]} />}>
-            <Route path="master/suppliers" element={<ComingSoonPage titleKey="nav.suppliers" />} />
+            <Route path="master/suppliers" element={<SuppliersPage />} />
           </Route>
 
           {/* Products */}
@@ -56,8 +62,8 @@ function App() {
           <Route path="inventory/operations" element={<ComingSoonPage titleKey="nav.inventoryOperations" />} />
 
           <Route element={<RequireRole roles={["admin", "manager"]} />}>
-            <Route path="units" element={<ComingSoonPage titleKey="nav.units" />} />
-            <Route path="warehouses" element={<ComingSoonPage titleKey="nav.warehouses" />} />
+            <Route path="units" element={<UnitsPage />} />
+            <Route path="warehouses" element={<WarehousesPage />} />
             <Route path="settings/app" element={<ComingSoonPage titleKey="nav.appSettings" />} />
           </Route>
 
