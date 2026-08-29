@@ -1,0 +1,221 @@
+-- ============================================================================
+-- WSaler — Seed data: permissions catalogue + role→permission mappings.
+-- Verbatim port of database/seeders/RolePermissionSeeder.php. This data is
+-- REQUIRED for auth_has_permission() to return anything but false — RBAC is
+-- non-functional until this migration runs.
+-- ============================================================================
+
+insert into permissions (name, description) values
+  ('view dashboard', 'View dashboard'),
+  ('view analytics', 'View analytics'),
+  ('view financial summary', 'View financial summary'),
+  ('view products', 'View products'),
+  ('create products', 'Create products'),
+  ('edit products', 'Edit products'),
+  ('delete products', 'Delete products'),
+  ('import products', 'Import products'),
+  ('export products', 'Export products'),
+  ('view inventory', 'View inventory'),
+  ('stock adjustment', 'Stock adjustment'),
+  ('stock transfer', 'Stock transfer'),
+  ('approve adjustments', 'Approve adjustments'),
+  ('view inventory valuation', 'View inventory valuation'),
+  ('view batches', 'View batches'),
+  ('create batches', 'Create batches'),
+  ('edit batches', 'Edit batch information'),
+  ('delete batches', 'Delete batches'),
+  ('dispose expired stock', 'Dispose expired stock'),
+  ('create purchase orders', 'Create purchase orders'),
+  ('approve purchase orders', 'Approved purchase orders'),
+  ('receive goods', 'Receive goods'),
+  ('process purchase returns', 'Process purchase returns'),
+  ('create quotations', 'Create quotations'),
+  ('create sales orders', 'Create sales orders'),
+  ('create invoices', 'Create invoices'),
+  ('edit invoices', 'Edit invoices'),
+  ('process sales returns', 'Process sales returns'),
+  ('cancel sales', 'Cancel sales'),
+  ('access pos', 'Access POS'),
+  ('apply discounts', 'Apply discounts'),
+  ('void transactions', 'Void transactions'),
+  ('reprint receipts', 'Reprint receipts'),
+  ('open cash drawer', 'Open cash drawer'),
+  ('view customers', 'View customers'),
+  ('create customers', 'Create customers'),
+  ('edit customers', 'Edit customers'),
+  ('delete customers', 'Delete customers'),
+  ('manage credit limits', 'Manage credit limits'),
+  ('view suppliers', 'View suppliers'),
+  ('create suppliers', 'Create suppliers'),
+  ('edit suppliers', 'Edit suppliers'),
+  ('delete suppliers', 'Delete suppliers'),
+  ('view warehouses', 'View warehouses'),
+  ('create warehouses', 'Create warehouses'),
+  ('edit warehouses', 'Edit warehouses'),
+  ('delete warehouses', 'Delete warehouses'),
+  ('manage transfers', 'Manage transfers'),
+  ('view financial reports', 'View financial reports'),
+  ('manage expenses', 'Manage expenses'),
+  ('manage payments', 'Manage payments'),
+  ('view profit & loss', 'View profit & loss'),
+  ('view reports', 'View reports'),
+  ('export reports', 'Export reports'),
+  ('print reports', 'Print reports'),
+  ('view users', 'View users'),
+  ('create users', 'Create users'),
+  ('edit users', 'Edit users'),
+  ('delete users', 'Delete users'),
+  ('assign roles', 'Assign roles'),
+  ('manage permissions', 'Manage permissions'),
+  ('salespeople.view', 'View salespeople'),
+  ('salespeople.manage', 'Manage salespeople'),
+  ('teams.view', 'View teams'),
+  ('teams.manage', 'Manage teams'),
+  ('territories.view', 'View territories'),
+  ('territories.manage', 'Manage territories'),
+  ('assignments.view', 'View customer assignments'),
+  ('assignments.manage', 'Manage customer assignments'),
+  ('targets.view', 'View sales targets'),
+  ('targets.manage', 'Manage sales targets'),
+  ('target_templates.view', 'View target templates'),
+  ('target_templates.manage', 'Manage target templates'),
+  ('approvals.review', 'Review approvals')
+on conflict (name) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- role_permissions — role -> permission name mapping.
+-- NOTE: `super_admin` and `administrator` do not exist as `user_role` enum
+-- values in this Postgres schema (the enum only has the 8 operational roles
+-- from App\Enums\UserRole + 'accountant' from the seeder). The Laravel
+-- 'super_admin'/'admin' distinction collapses to a single 'admin' role here,
+-- which already gets a wildcard bypass in auth_has_permission()/auth_is_admin()
+-- — so 'admin' is granted every permission below for parity with 'super_admin'.
+-- ---------------------------------------------------------------------------
+with role_perms (role, permission_name) as (
+  values
+    -- admin: super_admin ∪ admin permission set from the seeder (all permissions)
+    ('admin'::user_role, 'view dashboard'), ('admin'::user_role, 'view analytics'), ('admin'::user_role, 'view financial summary'),
+    ('admin'::user_role, 'view products'), ('admin'::user_role, 'create products'), ('admin'::user_role, 'edit products'),
+    ('admin'::user_role, 'delete products'), ('admin'::user_role, 'import products'), ('admin'::user_role, 'export products'),
+    ('admin'::user_role, 'view inventory'), ('admin'::user_role, 'stock adjustment'), ('admin'::user_role, 'stock transfer'),
+    ('admin'::user_role, 'approve adjustments'), ('admin'::user_role, 'view inventory valuation'),
+    ('admin'::user_role, 'view batches'), ('admin'::user_role, 'create batches'), ('admin'::user_role, 'edit batches'),
+    ('admin'::user_role, 'delete batches'), ('admin'::user_role, 'dispose expired stock'),
+    ('admin'::user_role, 'create purchase orders'), ('admin'::user_role, 'approve purchase orders'),
+    ('admin'::user_role, 'receive goods'), ('admin'::user_role, 'process purchase returns'),
+    ('admin'::user_role, 'create quotations'), ('admin'::user_role, 'create sales orders'), ('admin'::user_role, 'create invoices'),
+    ('admin'::user_role, 'edit invoices'), ('admin'::user_role, 'process sales returns'), ('admin'::user_role, 'cancel sales'),
+    ('admin'::user_role, 'access pos'), ('admin'::user_role, 'apply discounts'), ('admin'::user_role, 'void transactions'),
+    ('admin'::user_role, 'reprint receipts'), ('admin'::user_role, 'open cash drawer'),
+    ('admin'::user_role, 'view customers'), ('admin'::user_role, 'create customers'), ('admin'::user_role, 'edit customers'),
+    ('admin'::user_role, 'delete customers'), ('admin'::user_role, 'manage credit limits'),
+    ('admin'::user_role, 'view suppliers'), ('admin'::user_role, 'create suppliers'), ('admin'::user_role, 'edit suppliers'),
+    ('admin'::user_role, 'delete suppliers'),
+    ('admin'::user_role, 'view warehouses'), ('admin'::user_role, 'create warehouses'), ('admin'::user_role, 'edit warehouses'),
+    ('admin'::user_role, 'delete warehouses'), ('admin'::user_role, 'manage transfers'),
+    ('admin'::user_role, 'view financial reports'), ('admin'::user_role, 'manage expenses'), ('admin'::user_role, 'manage payments'),
+    ('admin'::user_role, 'view profit & loss'),
+    ('admin'::user_role, 'view reports'), ('admin'::user_role, 'export reports'), ('admin'::user_role, 'print reports'),
+    ('admin'::user_role, 'view users'), ('admin'::user_role, 'create users'), ('admin'::user_role, 'edit users'), ('admin'::user_role, 'delete users'),
+    ('admin'::user_role, 'assign roles'), ('admin'::user_role, 'manage permissions'),
+    ('admin'::user_role, 'salespeople.view'), ('admin'::user_role, 'salespeople.manage'),
+    ('admin'::user_role, 'teams.view'), ('admin'::user_role, 'teams.manage'),
+    ('admin'::user_role, 'territories.view'), ('admin'::user_role, 'territories.manage'),
+    ('admin'::user_role, 'assignments.view'), ('admin'::user_role, 'assignments.manage'),
+    ('admin'::user_role, 'targets.view'), ('admin'::user_role, 'targets.manage'),
+    ('admin'::user_role, 'target_templates.view'), ('admin'::user_role, 'target_templates.manage'),
+    ('admin'::user_role, 'approvals.review'),
+
+    -- manager
+    ('manager'::user_role, 'view dashboard'), ('manager'::user_role, 'view analytics'), ('manager'::user_role, 'view financial summary'),
+    ('manager'::user_role, 'view products'), ('manager'::user_role, 'edit products'), ('manager'::user_role, 'export products'),
+    ('manager'::user_role, 'view inventory'), ('manager'::user_role, 'approve adjustments'), ('manager'::user_role, 'view inventory valuation'),
+    ('manager'::user_role, 'view batches'), ('manager'::user_role, 'edit batches'), ('manager'::user_role, 'dispose expired stock'),
+    ('manager'::user_role, 'create purchase orders'), ('manager'::user_role, 'approve purchase orders'),
+    ('manager'::user_role, 'receive goods'), ('manager'::user_role, 'process purchase returns'),
+    ('manager'::user_role, 'create quotations'), ('manager'::user_role, 'create sales orders'), ('manager'::user_role, 'create invoices'),
+    ('manager'::user_role, 'edit invoices'), ('manager'::user_role, 'process sales returns'), ('manager'::user_role, 'cancel sales'),
+    ('manager'::user_role, 'access pos'), ('manager'::user_role, 'apply discounts'), ('manager'::user_role, 'void transactions'),
+    ('manager'::user_role, 'reprint receipts'),
+    ('manager'::user_role, 'view customers'), ('manager'::user_role, 'create customers'), ('manager'::user_role, 'edit customers'),
+    ('manager'::user_role, 'delete customers'), ('manager'::user_role, 'manage credit limits'),
+    ('manager'::user_role, 'view suppliers'), ('manager'::user_role, 'create suppliers'), ('manager'::user_role, 'edit suppliers'),
+    ('manager'::user_role, 'view warehouses'), ('manager'::user_role, 'manage transfers'),
+    ('manager'::user_role, 'view financial reports'), ('manager'::user_role, 'manage expenses'), ('manager'::user_role, 'manage payments'),
+    ('manager'::user_role, 'view profit & loss'),
+    ('manager'::user_role, 'view reports'), ('manager'::user_role, 'export reports'), ('manager'::user_role, 'print reports'),
+    ('manager'::user_role, 'view users'),
+    ('manager'::user_role, 'salespeople.view'), ('manager'::user_role, 'salespeople.manage'),
+    ('manager'::user_role, 'teams.view'), ('manager'::user_role, 'teams.manage'),
+    ('manager'::user_role, 'territories.view'), ('manager'::user_role, 'territories.manage'),
+    ('manager'::user_role, 'assignments.view'), ('manager'::user_role, 'assignments.manage'),
+    ('manager'::user_role, 'targets.view'), ('manager'::user_role, 'targets.manage'),
+    ('manager'::user_role, 'target_templates.view'), ('manager'::user_role, 'target_templates.manage'),
+    ('manager'::user_role, 'approvals.review'),
+
+    -- salesperson
+    ('salesperson'::user_role, 'view products'), ('salesperson'::user_role, 'export products'),
+    ('salesperson'::user_role, 'view inventory'),
+    ('salesperson'::user_role, 'view batches'),
+    ('salesperson'::user_role, 'create quotations'), ('salesperson'::user_role, 'create sales orders'),
+    ('salesperson'::user_role, 'create invoices'), ('salesperson'::user_role, 'process sales returns'),
+    ('salesperson'::user_role, 'view customers'), ('salesperson'::user_role, 'create customers'), ('salesperson'::user_role, 'edit customers'),
+    ('salesperson'::user_role, 'view suppliers'),
+    ('salesperson'::user_role, 'view reports'), ('salesperson'::user_role, 'export reports'), ('salesperson'::user_role, 'print reports'),
+    ('salesperson'::user_role, 'salespeople.view'),
+    ('salesperson'::user_role, 'teams.view'),
+    ('salesperson'::user_role, 'territories.view'),
+    ('salesperson'::user_role, 'assignments.view'),
+    ('salesperson'::user_role, 'targets.view'),
+
+    -- cashier
+    ('cashier'::user_role, 'view products'),
+    ('cashier'::user_role, 'access pos'), ('cashier'::user_role, 'apply discounts'), ('cashier'::user_role, 'reprint receipts'),
+    ('cashier'::user_role, 'open cash drawer'),
+    ('cashier'::user_role, 'create invoices'), ('cashier'::user_role, 'process sales returns'),
+    ('cashier'::user_role, 'view customers'), ('cashier'::user_role, 'create customers'),
+    ('cashier'::user_role, 'view reports'),
+
+    -- purchasing
+    ('purchasing'::user_role, 'view products'), ('purchasing'::user_role, 'export products'),
+    ('purchasing'::user_role, 'view inventory'),
+    ('purchasing'::user_role, 'view batches'), ('purchasing'::user_role, 'create batches'), ('purchasing'::user_role, 'edit batches'),
+    ('purchasing'::user_role, 'create purchase orders'), ('purchasing'::user_role, 'receive goods'), ('purchasing'::user_role, 'process purchase returns'),
+    ('purchasing'::user_role, 'view suppliers'), ('purchasing'::user_role, 'create suppliers'), ('purchasing'::user_role, 'edit suppliers'),
+    ('purchasing'::user_role, 'view warehouses'),
+    ('purchasing'::user_role, 'view reports'), ('purchasing'::user_role, 'export reports'),
+
+    -- warehouse
+    ('warehouse'::user_role, 'view products'),
+    ('warehouse'::user_role, 'view inventory'), ('warehouse'::user_role, 'stock adjustment'), ('warehouse'::user_role, 'stock transfer'),
+    ('warehouse'::user_role, 'view batches'), ('warehouse'::user_role, 'create batches'), ('warehouse'::user_role, 'edit batches'),
+    ('warehouse'::user_role, 'dispose expired stock'),
+    ('warehouse'::user_role, 'receive goods'), ('warehouse'::user_role, 'process purchase returns'),
+    ('warehouse'::user_role, 'view warehouses'), ('warehouse'::user_role, 'manage transfers'),
+    ('warehouse'::user_role, 'view reports'), ('warehouse'::user_role, 'export reports'),
+
+    -- delivery
+    ('delivery'::user_role, 'view products'),
+    ('delivery'::user_role, 'view inventory'), ('delivery'::user_role, 'stock transfer'),
+    ('delivery'::user_role, 'view warehouses'), ('delivery'::user_role, 'manage transfers'),
+    ('delivery'::user_role, 'view reports'),
+
+    -- accountant
+    ('accountant'::user_role, 'view dashboard'), ('accountant'::user_role, 'view analytics'), ('accountant'::user_role, 'view financial summary'),
+    ('accountant'::user_role, 'view products'),
+    ('accountant'::user_role, 'view inventory'), ('accountant'::user_role, 'view inventory valuation'),
+    ('accountant'::user_role, 'view batches'),
+    ('accountant'::user_role, 'create purchase orders'), ('accountant'::user_role, 'approve purchase orders'), ('accountant'::user_role, 'process purchase returns'),
+    ('accountant'::user_role, 'create invoices'), ('accountant'::user_role, 'process sales returns'),
+    ('accountant'::user_role, 'view customers'), ('accountant'::user_role, 'manage credit limits'),
+    ('accountant'::user_role, 'view suppliers'), ('accountant'::user_role, 'create suppliers'), ('accountant'::user_role, 'edit suppliers'),
+    ('accountant'::user_role, 'view warehouses'),
+    ('accountant'::user_role, 'view financial reports'), ('accountant'::user_role, 'manage expenses'), ('accountant'::user_role, 'manage payments'),
+    ('accountant'::user_role, 'view profit & loss'),
+    ('accountant'::user_role, 'view reports'), ('accountant'::user_role, 'export reports'), ('accountant'::user_role, 'print reports')
+)
+insert into role_permissions (role, permission_id)
+select rp.role, p.id
+from role_perms rp
+join permissions p on p.name = rp.permission_name
+on conflict (role, permission_id) do nothing;
